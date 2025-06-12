@@ -17,6 +17,6 @@
         android:layout_height="wrap_content"
         app:menu="@menu/bottom_navigation_menu"
         app:labelVisibilityMode="labeled"
-        style="@style/Widget.MaterialComponents.BottomNavigationView" /> <!-- Changed style for broader compatibility -->
+        style="@style/Widget.MaterialComponents.BottomNavigationView" />
 
 </LinearLayout>

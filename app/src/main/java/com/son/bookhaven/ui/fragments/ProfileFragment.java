@@ -1,4 +1,4 @@
-package com.son.bookhaven;
+package com.son.bookhaven.ui.fragments;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;

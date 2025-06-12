@@ -8,6 +8,10 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
+import com.son.bookhaven.ui.fragments.HomeFragment;
+import com.son.bookhaven.ui.fragments.ExploreFragment;
+import com.son.bookhaven.ui.fragments.CartFragment;
+import com.son.bookhaven.ui.fragments.ProfileFragment;
 
 public class MainActivity extends AppCompatActivity {
 
