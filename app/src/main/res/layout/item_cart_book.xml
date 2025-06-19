@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="12dp"
+    style="@style/Widget.Material3.CardView.Elevated">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"  android:gravity="center_vertical">
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkbox_item"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp" tools:checked="true" />
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/item_image"
+            android:layout_width="72dp"
+            android:layout_height="72dp" android:layout_marginEnd="16dp"
+            tools:src="@drawable/ic_book_placeholder"
+            android:scaleType="centerCrop"
+            android:background="?attr/colorSurfaceVariant"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Small"
+            android:contentDescription="@string/cd_book_cover" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/item_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="The Great Gatsby: A Very Long Title That Might Wrap"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/item_price"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                tools:text="$12.99"
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                android:textColor="?attr/colorPrimary" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_decrement"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:icon="@drawable/ic_decrease"
+                        app:iconTint="?attr/colorPrimary"
+                        app:iconPadding="0dp"
+                        app:cornerRadius="24dp"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:contentDescription="@string/cd_decrement_quantity" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tv_quantity"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="0dp"
+                        tools:text="2"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:minWidth="40dp"
+                        android:gravity="center"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_increment"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:icon="@drawable/ic_add"
+                        app:iconTint="?attr/colorPrimary"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:cornerRadius="8dp"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:contentDescription="@string/cd_increment_quantity" />
+
+                </LinearLayout>
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/item_total_price"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    tools:text="$25.98"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium" android:textColor="?attr/colorPrimary"
+                    android:gravity="end" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

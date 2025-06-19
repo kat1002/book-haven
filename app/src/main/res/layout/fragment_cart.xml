@@ -1,49 +1,154 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="?attr/colorSurfaceContainerLow">
 
-    <com.google.android.material.card.MaterialCardView
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        style="@style/Widget.Material3.CardView.Elevated">
+        android:fitsSystemWindows="true">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar_cart"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="Cart"
+            app:titleTextAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+            app:titleTextColor="?attr/colorOnSurface" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp"
+            app:layout_scrollFlags="scroll|enterAlways">
 
-            <ImageView
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp"
-                android:src="@drawable/ic_shopping_cart"
-                android:contentDescription="Cart Icon" />
-
-            <TextView
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_uncheck_all"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="Shopping Cart"
-                android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium" />
+                android:text="@string/uncheck_all"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:textColor="?attr/colorPrimary"/>
 
-            <TextView
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_select_all"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:text="Your cart is empty"
-                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                android:textAlignment="center" />
+                android:text="@string/select_all_items"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:textColor="?attr/colorPrimary"/>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_cart_action" style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:icon="@drawable/ic_shopping_cart"
+                app:iconTint="?attr/colorOnSurface"
+                android:contentDescription="@string/shopping_cart" />
 
         </LinearLayout>
 
-    </com.google.android.material.card.MaterialCardView>
+    </com.google.android.material.appbar.AppBarLayout>
 
-</LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="16dp"  android:paddingEnd="16dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_cart_items"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingTop="16dp" android:paddingBottom="16dp" android:clipToPadding="false" app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/item_cart_book" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="12dp"
+            style="@style/Widget.Material3.CardView.Elevated">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Subtotal:"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/subtotal_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="$40.48"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Total:"
+                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" />
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/total_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="$40.48"
+                        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                        android:textColor="?attr/colorPrimary" />
+
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_checkout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Proceed to Checkout"
+                    android:textSize="16sp"
+                    android:minHeight="56dp"
+                    style="@style/Widget.Material3.Button.IconButton.Filled" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

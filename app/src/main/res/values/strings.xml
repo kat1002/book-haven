@@ -4,4 +4,16 @@
     <string name="explore">Explore</string>
     <string name="cart">Cart</string>
     <string name="profile">Profile</string>
+    <string name="featured_books">Featured Books</string>
+    <string name="categories">Categories</string>
+    <string name="orders_activity"><![CDATA[Orders & Activity]]></string>
+    <string name="privacy_security"><![CDATA[Privacy & Security]]></string>
+    <string name="help_support"><![CDATA[Help & Support]]></string>
+    <string name="proceed_to_checkout">Proceed to Checkout</string>
+    <string name="uncheck_all">Uncheck All</string>
+    <string name="select_all_items">Select All Items</string>
+    <string name="shopping_cart">Shopping Cart</string>
+    <string name="cd_book_cover">Book Cover</string>
+    <string name="cd_decrement_quantity">decrease</string>
+    <string name="cd_increment_quantity">increase</string>
 </resources>

@@ -162,22 +162,6 @@ public class Book {
         this.publisher = publisher;
     }
 
-    public List<ReviewImage> getReviewImages() {
-        return reviewImages;
-    }
-
-    public void setReviewImages(List<ReviewImage> reviewImages) {
-        this.reviewImages = reviewImages;
-    }
-
-    public List<Review> getReviews() {
-        return reviews;
-    }
-
-    public void setReviews(List<Review> reviews) {
-        this.reviews = reviews;
-    }
-
     public Set<Author> getAuthors() {
         return authors;
     }

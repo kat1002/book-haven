@@ -1,8 +1,10 @@
 package com.son.bookhaven.data.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class CartItem {
+    private boolean isChecked;
     private int cartItemId;
     private int cartId;
     private int bookId;
@@ -10,6 +12,20 @@ public class CartItem {
     private LocalDateTime createdAt;
     private Book book;
     private Cart cart;
+
+    public CartItem(Book book, int quantity, boolean isChecked) {
+        this.book = book;
+        this.quantity = quantity;
+        this.isChecked = isChecked;
+    }
+
+    public boolean isChecked() {
+        return isChecked;
+    }
+
+    public void setChecked(boolean checked) {
+        isChecked = checked;
+    }
 
     public int getCartItemId() {
         return cartItemId;
@@ -65,5 +81,10 @@ public class CartItem {
 
     public void setCart(Cart cart) {
         this.cart = cart;
+    }
+
+    public BigDecimal getTotalPrice() {
+        BigDecimal bigQuantity = BigDecimal.valueOf(quantity);
+        return book.getPrice().multiply(bigQuantity);
     }
 }
