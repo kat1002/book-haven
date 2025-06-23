@@ -46,13 +46,13 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.navigation.fragment) // Assumes these point to stable versions like 2.7.0 or newer
     implementation(libs.navigation.ui)      // Assumes these point to stable versions like 2.7.0 or newer
-
     // Additional support libraries
-    implementation ("com.google.android.material:material:1.12.0")
-    implementation ("androidx.legacy:legacy-support-v4:1.0.0")
-    implementation ("com.android.volley:volley:1.2.1")
-    implementation ("com.google.code.gson:gson:2.11.0")
-
+    implementation (libs.material)
+    implementation (libs.legacy.support.v4)
+    implementation (libs.volley)
+    implementation (libs.gson)
+    implementation (libs.glide)
+    annotationProcessor (libs.compiler)
     // Testing
     testImplementation(libs.junit) // Assumes this points to junit:junit:4.13.2 or newer
 

@@ -12,6 +12,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager; // Import FragmentManager
+import androidx.fragment.app.FragmentTransaction; // Import FragmentTransaction
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -41,7 +43,7 @@ public class HomeFragment extends Fragment {
     private RecyclerView rvFeaturedBooks, rvNewArrivals, rvSearchResults;
     private FeaturedBooksAdapter featuredBooksAdapter;
     private NewArrivalsAdapter newArrivalsAdapter;
-    private NewArrivalsAdapter searchResultsAdapter; // This remains NewArrivalsAdapter as per previous change
+    private NewArrivalsAdapter searchResultsAdapter;
     private MaterialButton btnCart;
     private MaterialCardView cardFiction, cardNonFiction, cardBestsellers, cardNewArrivals;
     private SearchBar searchBar;
@@ -55,7 +57,7 @@ public class HomeFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
         initViews(view);
-        setupRecyclerViews(); // This will now call the smaller methods
+        setupRecyclerViews();
         setupClickListeners();
         setupSearchBarAndSearchView();
 
@@ -79,22 +81,21 @@ public class HomeFragment extends Fragment {
         rvSearchResults = view.findViewById(R.id.rv_search_results);
     }
 
-    // Refactored setupRecyclerViews method
+    // Refactored setupRecyclerViews method (as per previous request)
     private void setupRecyclerViews() {
         setupFeaturedBooksRecyclerView();
         setupNewArrivalsRecyclerView();
         setupSearchResultsRecyclerView();
     }
 
-    // New method for Featured Books RecyclerView setup
     private void setupFeaturedBooksRecyclerView() {
         rvFeaturedBooks.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         featuredBooksAdapter = new FeaturedBooksAdapter(new ArrayList<>());
         featuredBooksAdapter.setOnBookClickListener(new FeaturedBooksAdapter.OnBookClickListener() {
             @Override
             public void onBookClick(Book book) {
-                Toast.makeText(getContext(), "Clicked: " + book.getTitle(), Toast.LENGTH_SHORT).show();
                 // Navigate to book details
+                navigateToBookDetail(book); // <--- CHANGED HERE
             }
 
             @Override
@@ -106,15 +107,14 @@ public class HomeFragment extends Fragment {
         rvFeaturedBooks.setAdapter(featuredBooksAdapter);
     }
 
-    // New method for New Arrivals RecyclerView setup
     private void setupNewArrivalsRecyclerView() {
         rvNewArrivals.setLayoutManager(new LinearLayoutManager(getContext()));
         newArrivalsAdapter = new NewArrivalsAdapter(new ArrayList<>());
         newArrivalsAdapter.setOnBookClickListener(new NewArrivalsAdapter.OnBookClickListener() {
             @Override
             public void onBookClick(Book book) {
-                Toast.makeText(getContext(), "Clicked: " + book.getTitle(), Toast.LENGTH_SHORT).show();
                 // Navigate to book details
+                navigateToBookDetail(book); // <--- CHANGED HERE
             }
 
             @Override
@@ -126,15 +126,14 @@ public class HomeFragment extends Fragment {
         rvNewArrivals.setAdapter(newArrivalsAdapter);
     }
 
-    // New method for Search Results RecyclerView setup
     private void setupSearchResultsRecyclerView() {
         rvSearchResults.setLayoutManager(new LinearLayoutManager(getContext()));
         searchResultsAdapter = new NewArrivalsAdapter(new ArrayList<>());
         searchResultsAdapter.setOnBookClickListener(new NewArrivalsAdapter.OnBookClickListener() {
             @Override
             public void onBookClick(Book book) {
-                Toast.makeText(getContext(), "Search Result Clicked: " + book.getTitle(), Toast.LENGTH_SHORT).show();
                 // Navigate to book details from search results
+                navigateToBookDetail(book); // <--- CHANGED HERE
                 searchView.hide(); // Hide search view after selection
             }
 
@@ -146,6 +145,7 @@ public class HomeFragment extends Fragment {
         });
         rvSearchResults.setAdapter(searchResultsAdapter);
     }
+
 
     private void setupClickListeners() {
         btnCart.setOnClickListener(v -> {
@@ -181,8 +181,6 @@ public class HomeFragment extends Fragment {
 
         searchView.setupWithSearchBar(searchBar); // Link SearchView to SearchBar
 
-        // For Material SearchView, you listen to query changes via the EditText that it wraps.
-        // The SearchView itself provides access to this EditText.
         searchView.getEditText().addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -200,8 +198,6 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        // To handle the "submit" action (e.g., keyboard enter), you'd typically set an OnEditorActionListener
-        // on the SearchView's internal EditText.
         searchView.getEditText().setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
                     actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
@@ -209,21 +205,21 @@ public class HomeFragment extends Fragment {
                             event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER)) {
                 performSearch(searchView.getText().toString()); // Perform search on submit
                 searchView.hide(); // Hide the search view after submission
-                return true; // Consume the event
+                return true;
             }
             return false;
         });
 
         if (searchView.getToolbar() != null) {
             searchView.getToolbar().setNavigationOnClickListener(v -> {
-                searchView.hide(); // Hide the search view
+                searchView.hide();
             });
         }
     }
 
     private void performSearch(String query) {
         if (query == null || query.trim().isEmpty()) {
-            searchResultsAdapter.updateBooks(new ArrayList<>()); // Clear results if query is empty
+            searchResultsAdapter.updateBooks(new ArrayList<>());
             return;
         }
 
@@ -236,6 +232,25 @@ public class HomeFragment extends Fragment {
         searchResultsAdapter.updateBooks(filteredBooks);
     }
 
+    // --- New method to handle navigation to BookDetailFragment ---
+    private void navigateToBookDetail(Book book) {
+        // Create an instance of BookDetailFragment using the factory method
+        BookDetailFragment bookDetailFragment = BookDetailFragment.newInstance(book);
+
+        // Get the FragmentManager and start a transaction
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+        // Replace the current fragment (HomeFragment) with BookDetailFragment
+        // R.id.fragment_container should be the ID of the container where your fragments are displayed
+        fragmentTransaction.replace(R.id.frame_layout, bookDetailFragment);
+
+        // Add the transaction to the back stack so the user can navigate back
+        fragmentTransaction.addToBackStack(null); // You can give it a name if you need to pop by name
+
+        // Commit the transaction
+        fragmentTransaction.commit();
+    }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void loadSampleData() {

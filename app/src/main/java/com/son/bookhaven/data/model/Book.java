@@ -1,5 +1,6 @@
 package com.son.bookhaven.data.model;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -7,7 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class Book {
+public class Book implements Serializable {
     private int bookId;
 
     private String title;

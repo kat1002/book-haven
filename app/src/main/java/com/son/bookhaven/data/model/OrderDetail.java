@@ -1,13 +1,54 @@
 package com.son.bookhaven.data.model;
 
-public class OrderDetail {
+import java.io.Serializable;
+
+public class OrderDetail implements Serializable {
+    private int orderDetailId;
     private int orderId;
     private int bookId;
     private int quantity;
     private double unitPrice;
     private double subTotal;
-    private Book book;
-    private Order order;
+    private String bookName;
+    private double pricePerUnit;
+
+    public OrderDetail(int orderDetailId, int orderId, int bookId, String bookName, int quantity, double pricePerUnit) {
+        this.orderDetailId = orderDetailId;
+        this.orderId = orderId;
+        this.bookId = bookId;
+        this.bookName = bookName;
+        this.quantity = quantity;
+        this.pricePerUnit = pricePerUnit;
+        this.subTotal = quantity * pricePerUnit;
+    }
+
+    public OrderDetail() {
+
+    }
+
+    public double getPricePerUnit() {
+        return pricePerUnit;
+    }
+
+    public void setPricePerUnit(double pricePerUnit) {
+        this.pricePerUnit = pricePerUnit;
+    }
+
+    public String getBookName() {
+        return bookName;
+    }
+
+    public void setBookName(String bookName) {
+        this.bookName = bookName;
+    }
+
+    public int getOrderDetailId() {
+        return orderDetailId;
+    }
+
+    public void setOrderDetailId(int orderDetailId) {
+        this.orderDetailId = orderDetailId;
+    }
 
     public int getOrderId() {
         return orderId;
@@ -47,21 +88,5 @@ public class OrderDetail {
 
     public void setSubTotal(double subTotal) {
         this.subTotal = subTotal;
-    }
-
-    public Book getBook() {
-        return book;
-    }
-
-    public void setBook(Book book) {
-        this.book = book;
-    }
-
-    public Order getOrder() {
-        return order;
-    }
-
-    public void setOrder(Order order) {
-        this.order = order;
     }
 }
