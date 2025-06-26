@@ -17,6 +17,13 @@ public class Author {
 
     private Collection<Book> books = new ArrayList<>();
 
+    public Author(String authorName) {
+        this.authorName = authorName;
+    }
+
+    public Author() {
+    }
+
     // Getters and Setters
 
     public int getAuthorId() {

@@ -85,4 +85,40 @@
     <string name="ward_hint">Ward</string>
     <string name="street_hint">Street</string>
     <string name="note_hint">Note</string>
+    <string name="forgot_password_title">Forgot Your Password</string>
+    <string name="forgot_password_instructions">Enter your email address below to receive a password reset link.</string>
+    <string name="email_hint">Email Address</string>
+    <string name="reset_password_button">Reset Password</string>
+    <string name="error_email_required">Email address is required.</string>
+    <string name="error_invalid_email">Please enter a valid email address.</string>
+    <string name="password_reset_sent">Password reset link sent to %s. Please check your inbox.</string>
+    <string name="dismiss">Dismiss</string>
+
+    <!-- New strings for Explore Fragment -->
+    <string name="explore_title">Explore Books</string>
+    <string name="search_hint">Search books, authors...</string>
+    <string name="filter_button">Filter</string>
+    <string name="all_books">All Books</string>
+    <string name="filter_options_message">Filter options will appear here.</string>
+
+    <!-- Filter options for Explore fragment -->
+    <string name="filter_by_category">Filter by Category</string>
+    <string name="filter_by_price_range">Filter by Price Range</string>
+    <string name="apply_filters">Apply Filters</string>
+    <string name="clear_filters">Clear Filters</string>
+    <string name="min_price_hint">Min Price</string>
+    <string name="max_price_hint">Max Price</string>
+    <string name="filter_results_count">%d Results</string>
+    <string name="selected_category">Selected Category:</string>
+
+    <!-- Category names (example, add as needed) -->
+    <string name="category_fiction">Fiction</string>
+    <string name="category_non_fiction">Non-Fiction</string>
+    <string name="category_science">Science</string>
+    <string name="category_history">History</string>
+    <string name="category_fantasy">Fantasy</string>
+    <string name="category_thriller">Thriller</string>
+    <string name="category_romance">Romance</string>
+    <string name="category_biography">Biography</string>
+    <string name="category_programming">Programming</string>
 </resources>
