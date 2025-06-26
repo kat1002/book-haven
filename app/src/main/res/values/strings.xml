@@ -55,4 +55,20 @@
     <string name="privacy_policy">Privacy Policy</string>
     <string name="version_1_0_0">Version: 1.0.0</string>
     <string name="about">About</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="password">Password</string>
+    <string name="login">Login</string>
+    <string name="or">Or</string>
+    <string name="create_an_account">Create an Account</string>
+    <string name="app_logo">App Logo</string>
+    <string name="welcome_back">Welcome Back!</string>
+    <string name="email_or_username">Email or Username</string>
+    <string name="login_to_continue_to_bookhaven">Login to continue to BookHaven</string>
+    <string name="create_your_account">Create Your Account</string>
+    <string name="sign_up_to_start_exploring_bookhaven">Sign up to start exploring BookHaven</string>
+    <string name="full_name">Full Name</string>
+    <string name="email_address">Email Address</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="already_have_an_account">Already have an account?</string>
+    <string name="sign_up">Sign Up</string>
 </resources>
