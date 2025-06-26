@@ -71,4 +71,18 @@
     <string name="confirm_password">Confirm Password</string>
     <string name="already_have_an_account">Already have an account?</string>
     <string name="sign_up">Sign Up</string>
+    <string name="your_items">Your Items</string>
+    <string name="subtotal">Subtotal:</string>
+    <string name="shipping">Shipping:</string>
+    <string name="total">Total:</string>
+    <string name="place_order">Place Order</string>
+    <string name="checkout_title">Checkout\n</string>
+    <string name="delivery_address">Delivery Address</string>
+    <string name="recipient_name_hint">Recipient Name</string>
+    <string name="phone_hint">Phone Number</string>
+    <string name="province_hint">Province</string>
+    <string name="district_hint">District</string>
+    <string name="ward_hint">Ward</string>
+    <string name="street_hint">Street</string>
+    <string name="note_hint">Note</string>
 </resources>
