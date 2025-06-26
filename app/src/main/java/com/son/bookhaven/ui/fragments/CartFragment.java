@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.son.bookhaven.data.adapters.CartAdapter;
 import com.son.bookhaven.data.model.Author;
 import com.son.bookhaven.data.model.Book;
@@ -19,6 +20,7 @@ import com.son.bookhaven.data.model.CartItem;
 import com.son.bookhaven.data.model.LanguageCode;
 import com.son.bookhaven.databinding.FragmentCartBinding; // Make sure ViewBinding is enabled and package correct
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class CartFragment extends Fragment {
 
@@ -97,13 +100,32 @@ public class CartFragment extends Fragment {
         });
 
         binding.btnCheckout.setOnClickListener(v -> {
-            // Handle "Proceed to Checkout" logic here
-            // You can get selected items:
-            // List<CartItem> selectedItems = cartItemsList.stream()
-            //     .filter(CartItem::isChecked)
-            //     .collect(Collectors.toList());
-            // Then pass them to your next screen or process them.
-            // Example: Toast.makeText(getContext(), "Proceeding to checkout with " + selectedItems.size() + " items", Toast.LENGTH_SHORT).show();
+            List<CartItem> selectedItems = cartItemsList.stream()
+                    .filter(CartItem::isChecked)
+                    .collect(Collectors.toList());
+
+            if (selectedItems.isEmpty()) {
+                Snackbar.make(view, "Please select items to checkout.", Snackbar.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Create a new instance of CheckoutFragment
+            CheckoutFragment checkoutFragment = new CheckoutFragment();
+
+            // Create a Bundle to pass data
+            Bundle bundle = new Bundle();
+            bundle.putSerializable("cart_items", (Serializable) selectedItems); // Pass the list as Serializable
+            checkoutFragment.setArguments(bundle);
+
+            // Navigate to CheckoutFragment
+            if (getParentFragmentManager() != null) {
+                getParentFragmentManager().beginTransaction()
+                        .replace(getParentFragmentManager().findFragmentById(this.getId()).getId(), checkoutFragment)
+                        .addToBackStack(null) // Allows going back to CartFragment
+                        .commit();
+            } else {
+                Log.e("CartFragment", "ParentFragmentManager is null, cannot navigate.");
+            }
         });
 
         // Initial calculation
