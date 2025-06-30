@@ -11,6 +11,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout; // Import ConstraintLayout
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -29,12 +30,13 @@ public class ProfileFragment extends Fragment {
     private MaterialToolbar toolbar;
     private ShapeableImageView profileImage;
     private TextView profileName, profileEmail;
-    private MaterialButton btnEditProfile, btnLogOut;
-    private LinearLayout layoutOrderHistory,
-            layoutAppSettings, layoutPrivacySecurity, layoutHelpSupport;
+    private MaterialButton btnEditProfile, btnLogOut, btnSignIn, btnSignUp; // Added btnSignIn, btnSignUp
+    private LinearLayout layoutOrderHistory, layoutAppSettings, layoutPrivacySecurity, layoutHelpSupport;
+    private ConstraintLayout groupLoggedInProfile; // Added reference to the logged-in profile group
+    private LinearLayout layoutAuthButtons; // Added reference to the auth buttons layout
 
     // Dummy User for demonstration. In a real app, you'd fetch this from a ViewModel or repository.
-    private User currentUser;
+    private User currentUser; // This will determine if the user is logged in or not
 
     public ProfileFragment() {
         // Required empty public constructor
@@ -47,7 +49,7 @@ public class ProfileFragment extends Fragment {
 
         initViews(view);
         setupToolbar();
-        populateProfileData(); // Populate user details
+        checkLoginStatusAndPopulateUI(); // Checks login status and populates UI accordingly
         setupClickListeners(); // Set up click handlers for all interactive elements
 
         return view;
@@ -65,6 +67,11 @@ public class ProfileFragment extends Fragment {
         layoutAppSettings = view.findViewById(R.id.layout_app_settings);
         layoutPrivacySecurity = view.findViewById(R.id.layout_privacy_security);
         layoutHelpSupport = view.findViewById(R.id.layout_help_support);
+
+        groupLoggedInProfile = view.findViewById(R.id.group_logged_in_profile); // Initialize
+        layoutAuthButtons = view.findViewById(R.id.layout_auth_buttons);       // Initialize
+        btnSignIn = view.findViewById(R.id.btn_sign_in);                       // Initialize
+        btnSignUp = view.findViewById(R.id.btn_sign_up);                       // Initialize
     }
 
     private void setupToolbar() {
@@ -81,107 +88,151 @@ public class ProfileFragment extends Fragment {
         }
     }
 
-    private void populateProfileData() {
-        // For demonstration, create a dummy user
-        // In a real application, you would fetch the actual user data
-        // from your authentication system, a database, or a ViewModel.
-        currentUser = new User("Sabrina Aryan", "sabrina.aryan@example.com", "0987654321", "https://example.com/your_profile_image.jpg");
-        // Or fetch from a global place:
-        // currentUser = UserManager.getInstance().getCurrentUser(); // Example of a singleton user manager
+    private void checkLoginStatusAndPopulateUI() {
+        // This is where you would get the actual login status from your auth system
+        // For demonstration:
+        // Set currentUser to null for logged out state, or to a User object for logged in state
+        // For testing logged-out state:
+        // currentUser = null;
+        // For testing logged-in state:
+        currentUser = new User("Sabrina Aryan", "sabrina.aryan@example.com", "0987654321", "https://picsum.photos/96"); // Dummy URL
 
         if (currentUser != null) {
+            // User is logged in
+            groupLoggedInProfile.setVisibility(View.VISIBLE);
+            btnLogOut.setVisibility(View.VISIBLE);
+            layoutAuthButtons.setVisibility(View.GONE);
+
             profileName.setText(currentUser.getFullName());
             profileEmail.setText(currentUser.getEmail());
 
-            // Load profile image (using Glide as an example)
+            // Load profile image (using Glide as an example, otherwise use a default drawable)
             // if (currentUser.getProfileImageUrl() != null && !currentUser.getProfileImageUrl().isEmpty()) {
             //     Glide.with(this)
             //          .load(currentUser.getProfileImageUrl())
-            //          .placeholder(R.drawable.ic_default_avatar) // Show default while loading
-            //          .error(R.drawable.ic_default_avatar)     // Show default if loading fails
+            //          .placeholder(R.drawable.ic_default_avatar)
+            //          .error(R.drawable.ic_default_avatar)
             //          .into(profileImage);
             // } else {
             //     profileImage.setImageResource(R.drawable.ic_default_avatar);
             // }
-            profileImage.setImageResource(R.drawable.ic_default_avatar); // Using placeholder for now
+            profileImage.setImageResource(R.drawable.ic_default_avatar); // Placeholder for now
+            // If you have a real image URL, you would load it here.
+            // Example for dynamic URL placeholder if you don't use Glide/Picasso and need a quick test:
+            // if (currentUser.getProfileImageUrl() != null && !currentUser.getProfileImageUrl().isEmpty()) {
+            //     // Note: Direct URL loading needs a library like Glide/Picasso for production
+            //     // This is just a conceptual placeholder
+            //     profileImage.setImageDrawable(null); // Clear previous image
+            //     // You'd need an async task or library to load from URL properly
+            // } else {
+            //     profileImage.setImageResource(R.drawable.ic_default_avatar);
+            // }
+
+
+            // Enable/disable logged-in specific options
+            layoutOrderHistory.setEnabled(true);
+            layoutOrderHistory.setClickable(true);
+            // ... other logged-in specific options
         } else {
-            // Handle case where no user is logged in or data not available
-            profileName.setText("Guest User");
-            profileEmail.setText("Not logged in");
-            profileImage.setImageResource(R.drawable.ic_default_avatar);
-            btnEditProfile.setVisibility(View.GONE); // Hide edit button for guest
-            btnLogOut.setText("Log In"); // Change logout to login
-            Log.w("ProfileFragment", "No user data available.");
+            // User is NOT logged in
+            groupLoggedInProfile.setVisibility(View.GONE);
+            btnLogOut.setVisibility(View.GONE); // No logout button if not logged in
+            layoutAuthButtons.setVisibility(View.VISIBLE);
+
+            // You might want to disable options that require login
+            layoutOrderHistory.setEnabled(false);
+            layoutOrderHistory.setClickable(false);
+            // ... other options
+            Log.d("ProfileFragment", "User not logged in. Showing auth buttons.");
         }
     }
 
     private void setupClickListeners() {
-        btnEditProfile.setOnClickListener(v -> navigateToEditProfile());
+        // Click listeners for logged-in state (if visible)
+        btnEditProfile.setOnClickListener(v -> {
+            if (currentUser != null) {
+                navigateToEditProfile();
+            } else {
+                Toast.makeText(getContext(), R.string.not_logged_in_message, Toast.LENGTH_SHORT).show();
+            }
+        });
         btnLogOut.setOnClickListener(v -> handleLogout());
 
-        layoutOrderHistory.setOnClickListener(v -> navigateToOrderHistory());
+        // Click listeners for not-logged-in state (if visible)
+        btnSignIn.setOnClickListener(v -> navigateToSignIn());
+        btnSignUp.setOnClickListener(v -> navigateToSignUp());
+
+
+        // General settings/support options (might be available even if not logged in,
+        // or their logic might adapt if clicked when not logged in)
+        layoutOrderHistory.setOnClickListener(v -> {
+            if (currentUser != null) {
+                navigateToOrderHistory();
+            } else {
+                Toast.makeText(getContext(), R.string.not_logged_in_message, Toast.LENGTH_SHORT).show();
+            }
+        });
         layoutAppSettings.setOnClickListener(v -> navigateToAppSettings());
         layoutPrivacySecurity.setOnClickListener(v -> showToast("Privacy & Security clicked"));
         layoutHelpSupport.setOnClickListener(v -> showToast("Help & Support clicked"));
     }
 
     private void navigateToAppSettings(){
-        // Get the FragmentManager
         FragmentManager fragmentManager = getParentFragmentManager();
-        // Start a FragmentTransaction
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-
-        // Create a new instance of OrderHistoryFragment
         AppSettingsFragment appSettingsFragment = new AppSettingsFragment();
-
-        fragmentTransaction.replace(R.id.frame_layout, appSettingsFragment);
-
+        fragmentTransaction.replace(R.id.frame_layout, appSettingsFragment); // Replace with your actual fragment container ID
         fragmentTransaction.addToBackStack(null);
-
         fragmentTransaction.commit();
     }
 
     private void navigateToOrderHistory(){
-            // Get the FragmentManager
-            FragmentManager fragmentManager = getParentFragmentManager();
-            // Start a FragmentTransaction
-            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-
-            // Create a new instance of OrderHistoryFragment
-            OrderHistoryFragment orderHistoryFragment = new OrderHistoryFragment();
-
-            fragmentTransaction.replace(R.id.frame_layout, orderHistoryFragment);
-
-            fragmentTransaction.addToBackStack(null);
-
-            fragmentTransaction.commit();
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        OrderHistoryFragment orderHistoryFragment = new OrderHistoryFragment();
+        fragmentTransaction.replace(R.id.frame_layout, orderHistoryFragment); // Replace with your actual fragment container ID
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
     }
 
     private void navigateToEditProfile() {
-        if (currentUser != null) {
-            // Create an instance of EditProfileFragment
-            EditProfileFragment editProfileFragment = EditProfileFragment.newInstance(currentUser);
+        EditProfileFragment editProfileFragment = EditProfileFragment.newInstance(currentUser);
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.replace(R.id.frame_layout, editProfileFragment); // Replace with your actual fragment container ID
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
+    }
 
-            FragmentManager fragmentManager = getParentFragmentManager();
-            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+    private void navigateToSignIn() {
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        LoginFragment loginFragment = new LoginFragment(); // Assuming you have a LoginFragment
+        fragmentTransaction.replace(R.id.frame_layout, loginFragment); // Replace with your actual fragment container ID
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
+        Toast.makeText(getContext(), "Navigate to Sign In", Toast.LENGTH_SHORT).show();
+    }
 
-            fragmentTransaction.replace(R.id.frame_layout, editProfileFragment);
-
-            fragmentTransaction.addToBackStack(null);
-
-            fragmentTransaction.commit();
-        } else {
-            Toast.makeText(getContext(), "Please log in to edit profile.", Toast.LENGTH_SHORT).show();
-        }
+    private void navigateToSignUp() {
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        SignUpFragment registerFragment = new SignUpFragment(); // Assuming you have a RegisterFragment
+        fragmentTransaction.replace(R.id.frame_layout, registerFragment); // Replace with your actual fragment container ID
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
+        Toast.makeText(getContext(), "Navigate to Sign Up", Toast.LENGTH_SHORT).show();
     }
 
     private void handleLogout() {
-        Toast.makeText(getContext(), "Logging out...", Toast.LENGTH_SHORT).show();
+        // In a real app, you would clear user session/token here
+        currentUser = null; // Clear current user for demonstration
+        checkLoginStatusAndPopulateUI(); // Update UI after logout
+        Toast.makeText(getContext(), "Logged out successfully.", Toast.LENGTH_SHORT).show();
         Log.d("ProfileFragment", "User logged out.");
     }
 
     private void showToast(String message) {
         Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
-        // Here you would implement actual navigation or logic for each setting item
     }
 }

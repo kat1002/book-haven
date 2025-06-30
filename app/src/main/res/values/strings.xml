@@ -121,4 +121,10 @@
     <string name="category_romance">Romance</string>
     <string name="category_biography">Biography</string>
     <string name="category_programming">Programming</string>
+    <string name="log_out">Log out</string>
+    <string name="app_settings">App Settings</string>
+    <string name="order_history">Order History</string>
+    <string name="sign_in">Sign in</string>
+    <string name="not_logged_in_message">Sign in to manage your profile, orders, and settings.</string>
+    <string name="profile_title">Profile</string>
 </resources>
