@@ -10,6 +10,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textview.MaterialTextView;
 import com.son.bookhaven.R;
+import com.son.bookhaven.data.dto.CartItemResponse;
 import com.son.bookhaven.data.model.CartItem;
 import com.son.bookhaven.data.model.Book; // Added this import, assuming CartItem uses it
 
@@ -21,18 +22,18 @@ import android.util.Log;
 public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder> {
 
     // --- CRITICAL CHANGE 1: Initialize cartItems here as a new, mutable list ---
-    private final List<CartItem> cartItems = new ArrayList<>();
+    private final List<CartItemResponse> cartItems = new ArrayList<>();
 
     private final OnQuantityChangeListener onQuantityChangeListener;
     private final OnCheckedChangeListener onCheckedChangeListener;
 
     // Define interfaces for callbacks
     public interface OnQuantityChangeListener {
-        void onQuantityChange(CartItem item, int newQuantity);
+        void onQuantityChange(CartItemResponse item, int newQuantity);
     }
 
     public interface OnCheckedChangeListener {
-        void onCheckedChange(CartItem item, boolean isChecked);
+        void onCheckedChange(CartItemResponse item, boolean isChecked);
     }
 
     // --- CRITICAL CHANGE 2: Modify constructor - it no longer needs to receive the list ---
@@ -52,7 +53,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull CartViewHolder holder, int position) {
-        CartItem item = cartItems.get(position);
+        CartItemResponse item = cartItems.get(position);
         holder.bind(item);
     }
 
@@ -62,12 +63,12 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
     }
 
     // Call this method to update the data in the adapter
-    public void updateData(List<CartItem> newItems) {
+    public void updateData(List<CartItemResponse> newItems) {
         Log.d("CartAdapter", "Updating data with " + newItems.size() + " items.");
 
         for (int i = 0; i < newItems.size(); i++) {
-            CartItem item = newItems.get(i);
-            Log.d("CartAdapter", "  Incoming item " + i + ": " + item.getBook().getTitle() + " (Qty: " + item.getQuantity() + ")");
+            CartItemResponse item = newItems.get(i);
+            Log.d("CartAdapter", "  Incoming item " + i + ": " + item.getTitle() + " (Qty: " + item.getQuantity() + ")");
         }
 
         cartItems.clear(); // Clears the adapter's *internal* list
@@ -99,10 +100,10 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
             itemTotalPrice = itemView.findViewById(R.id.item_total_price);
         }
 
-        public void bind(CartItem item) {
-            checkboxItem.setChecked(item.isChecked());
-            itemName.setText(item.getBook().getTitle());
-            itemPrice.setText(String.format(Locale.US, "$%.2f", item.getBook().getPrice()));
+        public void bind(CartItemResponse item) {
+            checkboxItem.setChecked(item.getIsSelected());
+            itemName.setText(item.getTitle());
+            itemPrice.setText(String.format(Locale.US, "$%.2f", item.getPrice()));
             tvQuantity.setText(String.valueOf(item.getQuantity()));
             itemTotalPrice.setText(String.format(Locale.US, "$%.2f", item.getTotalPrice()));
 

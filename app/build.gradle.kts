@@ -59,4 +59,8 @@ dependencies {
     androidTestImplementation(libs.ext.junit)      // Assumes this points to androidx.test.ext:junit:1.1.5 or newer
     androidTestImplementation(libs.espresso.core) // Assumes this points to androidx.test.espresso:espresso-core:3.5.1 or newer
     // No need for the explicit androidx.test core, runner, or older espresso alpha versions if libs.ext.junit and libs.espresso.core are up-to-date.
+    //api
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation ("com.squareup.okhttp3:okhttp:4.9.3")
 }
