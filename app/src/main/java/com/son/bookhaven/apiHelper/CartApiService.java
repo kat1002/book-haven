@@ -1,13 +1,11 @@
 package com.son.bookhaven.apiHelper;
 
-import com.son.bookhaven.data.dto.CartItemResponse;
-import com.son.bookhaven.data.model.User;
+import com.son.bookhaven.data.dto.response.CartItemResponse;
 
 import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
-import retrofit2.http.Header;
 import retrofit2.http.Query;
 
 public interface CartApiService {

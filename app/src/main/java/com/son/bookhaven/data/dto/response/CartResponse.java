@@ -1,4 +1,4 @@
-package com.son.bookhaven.data.dto;
+package com.son.bookhaven.data.dto.response;
 
 import java.util.List;
 

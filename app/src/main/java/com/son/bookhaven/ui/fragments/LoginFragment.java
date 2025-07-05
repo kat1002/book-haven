@@ -18,7 +18,18 @@ import androidx.fragment.app.FragmentTransaction;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.google.gson.Gson;
 import com.son.bookhaven.R; // Ensure this imports your R file correctly
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.AuthApiService;
+import com.son.bookhaven.authService.TokenManager;
+import com.son.bookhaven.data.dto.request.LoginRequest;
+import com.son.bookhaven.data.dto.response.ErrorResponse;
+import com.son.bookhaven.data.dto.response.LoginResponse;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class LoginFragment extends Fragment {
 
@@ -32,8 +43,41 @@ public class LoginFragment extends Fragment {
     private TextView tvForgotPassword;
     private MaterialButton btnSignUp;
 
+    private AuthApiService authApiService;
+    private TokenManager tokenManager;
+
     public LoginFragment() {
         // Required empty public constructor
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        hideBottomNavigation();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        showBottomNavigation();
+    }
+
+    private void hideBottomNavigation() {
+        if (getActivity() != null) {
+            View bottomNavigation = getActivity().findViewById(R.id.bottom_navigation); // Use your actual ID
+            if (bottomNavigation != null) {
+                bottomNavigation.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private void showBottomNavigation() {
+        if (getActivity() != null) {
+            View bottomNavigation = getActivity().findViewById(R.id.bottom_navigation); // Use your actual ID
+            if (bottomNavigation != null) {
+                bottomNavigation.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     @Override
@@ -43,6 +87,10 @@ public class LoginFragment extends Fragment {
 
         initViews(view);
         setupClickListeners();
+
+        // Initialize API service and token manager
+        authApiService = ApiClient.getClient().create(AuthApiService.class);
+        tokenManager = new TokenManager(requireContext());
 
         return view;
     }
@@ -84,54 +132,89 @@ public class LoginFragment extends Fragment {
         }
 
         if (isValid) {
-            Log.d(TAG, "Attempting login with: " + emailOrUsername);
-            // In a real app, you would send this to your authentication service
-            // (e.g., Firebase Auth, your backend API)
+            // Disable login button to prevent multiple requests
+            btnLogin.setEnabled(false);
+            btnLogin.setText("Logging in...");
 
-            // Simulate a successful login
-            Toast.makeText(getContext(), "Login successful for " + emailOrUsername, Toast.LENGTH_SHORT).show();
+            // Create login request
+            LoginRequest loginRequest = new LoginRequest(emailOrUsername, password);
 
-            // After successful login, you would typically navigate to the main screen
-            // or perform a user session setup.
-            // Example:
-            // Intent intent = new Intent(requireActivity(), MainActivity.class);
-            // intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK); // Clear back stack
-            // startActivity(intent);
-            // requireActivity().finish();
+            // Make API call
+            Call<LoginResponse> call = authApiService.login(loginRequest);
+            call.enqueue(new Callback<LoginResponse>() {
+                @Override
+                public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
+                    // Re-enable login button
+                    btnLogin.setEnabled(true);
+                    btnLogin.setText("Login");
 
-            // For fragment-based navigation, just pop back or replace with main fragment
-            if (getParentFragmentManager().getBackStackEntryCount() > 0) {
-                getParentFragmentManager().popBackStack(); // Go back to previous fragment
-            } else {
-                // If this is the root, replace with your main app content fragment
-                // Example:
-                // getParentFragmentManager().beginTransaction()
-                //     .replace(R.id.fragment_container, new HomeFragment()) // Replace with your main fragment
-                //     .commit();
-            }
+                    if (response.isSuccessful() && response.body() != null) {
+                        LoginResponse loginResponse = response.body();
 
+                        // Save token and user data
+                        tokenManager.saveUserData(loginResponse.getToken(), loginResponse.getUser());
+
+                        Toast.makeText(getContext(),
+                                "Welcome back, " + loginResponse.getUser().getFullName() + "!",
+                                Toast.LENGTH_SHORT).show();
+
+                        Log.d(TAG, "Login successful for user: " + loginResponse.getUser().getFullName());
+
+                        // Navigate to main screen
+                        navigateToMainScreen();
+
+                    } else {
+                        // Handle error response
+                        String errorMessage = "Login failed";
+                        if (response.errorBody() != null) {
+                            try {
+                                String errorBody = response.errorBody().string();
+                                ErrorResponse errorResponse = new Gson().fromJson(errorBody, ErrorResponse.class);
+                                errorMessage = errorResponse.getMessage();
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing error response", e);
+                            }
+                        }
+                        Toast.makeText(getContext(), errorMessage, Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<LoginResponse> call, Throwable t) {
+                    // Re-enable login button
+                    btnLogin.setEnabled(true);
+                    btnLogin.setText("Login");
+
+                    Log.e(TAG, "Login API call failed", t);
+                    Toast.makeText(getContext(),
+                            "Network error. Please check your connection.",
+                            Toast.LENGTH_SHORT).show();
+                }
+            });
         } else {
             Toast.makeText(getContext(), "Please correct the errors.", Toast.LENGTH_SHORT).show();
         }
     }
 
+    private void navigateToMainScreen() {
+        if (getActivity() != null && isAdded()) {
+            getParentFragmentManager().beginTransaction()
+                    .replace(R.id.frame_layout, new ProfileFragment())
+                    .commitAllowingStateLoss();
+        }
+    }
+
     private void handleForgotPassword() {
-        Toast.makeText(getContext(), "Forgot Password clicked! (Navigate to password reset screen)", Toast.LENGTH_LONG).show();
-        // Example: Navigate to a ForgotPasswordFragment
-        // FragmentManager fragmentManager = getParentFragmentManager();
-        // fragmentManager.beginTransaction()
-        //     .replace(R.id.fragment_container, new ForgotPasswordFragment())
-        //     .addToBackStack(null)
-        //     .commit();
+        Toast.makeText(getContext(), "Forgot Password clicked!", Toast.LENGTH_SHORT).show();
+        // Navigate to forgot password fragment
     }
 
     private void handleSignUp() {
-        Toast.makeText(getContext(), "Sign Up clicked! (Navigate to registration screen)", Toast.LENGTH_LONG).show();
-        // Example: Navigate to a RegisterFragment
-        // FragmentManager fragmentManager = getParentFragmentManager();
-        // fragmentManager.beginTransaction()
-        //     .replace(R.id.fragment_container, new RegisterFragment())
-        //     .addToBackStack(null)
-        //     .commit();
+        Toast.makeText(getContext(), "Sign Up clicked!", Toast.LENGTH_SHORT).show();
+        if (getActivity() != null && isAdded()) {
+            getParentFragmentManager().beginTransaction()
+                    .replace(R.id.frame_layout, new SignUpFragment())
+                    .commitAllowingStateLoss();
+        }
     }
 }

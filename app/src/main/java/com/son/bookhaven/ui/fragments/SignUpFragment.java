@@ -7,19 +7,28 @@ import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.son.bookhaven.R; // Ensure this imports your R file correctly
+import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.AuthApiService;
+import com.son.bookhaven.data.dto.request.RegisterRequest;
+import com.son.bookhaven.data.dto.response.RegisterResponse;
+
+import java.io.IOException;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class SignUpFragment extends Fragment {
 
@@ -35,9 +44,42 @@ public class SignUpFragment extends Fragment {
     private TextInputEditText etConfirmPassword;
     private MaterialButton btnSignUp;
     private TextView tvLoginLink;
+    private ProgressBar progressBar; // Add progress bar for loading state
+
+    private AuthApiService apiService;
 
     public SignUpFragment() {
         // Required empty public constructor
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        hideBottomNavigation();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        showBottomNavigation();
+    }
+
+    private void hideBottomNavigation() {
+        if (getActivity() != null) {
+            View bottomNavigation = getActivity().findViewById(R.id.bottom_navigation); // Use your actual ID
+            if (bottomNavigation != null) {
+                bottomNavigation.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private void showBottomNavigation() {
+        if (getActivity() != null) {
+            View bottomNavigation = getActivity().findViewById(R.id.bottom_navigation); // Use your actual ID
+            if (bottomNavigation != null) {
+                bottomNavigation.setVisibility(View.VISIBLE);
+            }
+        }
     }
 
     @Override
@@ -47,6 +89,7 @@ public class SignUpFragment extends Fragment {
 
         initViews(view);
         setupClickListeners();
+        initApiService();
 
         return view;
     }
@@ -62,6 +105,11 @@ public class SignUpFragment extends Fragment {
         etConfirmPassword = view.findViewById(R.id.et_confirm_password);
         btnSignUp = view.findViewById(R.id.btn_sign_up);
         tvLoginLink = view.findViewById(R.id.tv_login_link);
+        progressBar = view.findViewById(R.id.progress_bar); // Add this to your layout
+    }
+
+    private void initApiService() {
+        apiService = ApiClient.getClient().create(AuthApiService.class);
     }
 
     private void setupClickListeners() {
@@ -113,30 +161,106 @@ public class SignUpFragment extends Fragment {
         }
 
         if (isValid) {
-            Log.d(TAG, "Attempting sign up for: " + email);
-            // In a real app, you would send this to your registration service
-            // (e.g., Firebase Auth, your backend API)
-
-            // Simulate a successful registration
-            Toast.makeText(getContext(), "Registration successful! Welcome, " + fullName, Toast.LENGTH_LONG).show();
-
-            // After successful sign up, you might automatically log them in
-            // and navigate to the main screen, or navigate to the login screen.
-            navigateToLogin(); // Go back to login screen
+            performSignUp(fullName, email, password);
         } else {
             Toast.makeText(getContext(), "Please correct the errors and try again.", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void navigateToLogin() {
-        FragmentManager fragmentManager = getParentFragmentManager();
-        if (fragmentManager.getBackStackEntryCount() > 0) {
-            fragmentManager.popBackStack(); // Go back to the previous fragment (LoginFragment)
+    private void performSignUp(String fullName, String email, String password) {
+        // Show loading state
+        setLoadingState(true);
+
+        // Create register request
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setFullName(fullName);
+        registerRequest.setEmail(email);
+        registerRequest.setPassword(password);
+        registerRequest.setRoleID(2); // Default role ID
+        registerRequest.setReturnUrl(""); // Return URL is null
+
+        Log.d(TAG, "Attempting sign up for: " + email);
+
+        // Make API call
+        Call<RegisterResponse> call = apiService.registerMobile(registerRequest);
+        call.enqueue(new Callback<RegisterResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<RegisterResponse> call, @NonNull Response<RegisterResponse> response) {
+                setLoadingState(false);
+
+                if (response.isSuccessful() && response.body() != null) {
+                    RegisterResponse registerResponse = response.body();
+                    Toast.makeText(getContext(),
+                            "Registration successful! Welcome, " + fullName,
+                            Toast.LENGTH_LONG).show();
+
+                    Log.d(TAG, "Registration successful: " + registerResponse.getMessage());
+
+                    // Navigate to login screen after successful registration
+                    navigateToLogin();
+                } else {
+                    // Handle error response
+                    String errorMessage = "Registration failed. Please try again.";
+
+                    if (response.errorBody() != null) {
+                        try {
+                            // Parse error response
+                            String errorResponse = response.errorBody().string();
+                            // You might want to parse this JSON to get the actual error message
+                            Log.e(TAG, "Registration error: " + errorResponse);
+
+                            // If your API returns a specific error message format, parse it here
+                            // For now, we'll use a generic message
+                            errorMessage = "Registration failed. Please check your details and try again.";
+                        } catch (IOException e) {
+                            Log.e(TAG, "Error parsing error response", e);
+                        }
+                    }
+
+                    Toast.makeText(getContext(), errorMessage, Toast.LENGTH_LONG).show();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<RegisterResponse> call, @NonNull Throwable t) {
+                setLoadingState(false);
+                Log.e(TAG, "Registration API call failed", t);
+
+                String errorMessage = "Network error. Please check your internet connection and try again.";
+                if (t instanceof java.net.ConnectException) {
+                    errorMessage = "Unable to connect to server. Please try again later.";
+                }
+
+                Toast.makeText(getContext(), errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void setLoadingState(boolean isLoading) {
+        btnSignUp.setEnabled(!isLoading);
+        progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+
+        if (isLoading) {
+            btnSignUp.setText("Signing Up...");
         } else {
-            // If SignUpFragment is the root, replace it with LoginFragment
-            fragmentManager.beginTransaction()
+            btnSignUp.setText("Sign Up");
+        }
+    }
+
+    private void navigateToLogin() {
+//        FragmentManager fragmentManager = getParentFragmentManager();
+//        if (fragmentManager.getBackStackEntryCount() > 0) {
+//            fragmentManager.popBackStack(); // Go back to the previous fragment (LoginFragment)
+//        } else {
+//            // If SignUpFragment is the root, replace it with LoginFragment
+//            fragmentManager.beginTransaction()
+//                    .replace(R.id.frame_layout, new LoginFragment())
+//                    .commit();
+//        }
+        if (getActivity() != null && isAdded()) {
+            getParentFragmentManager().beginTransaction()
                     .replace(R.id.frame_layout, new LoginFragment())
-                    .commit();
+                    .commitAllowingStateLoss();
         }
     }
 }
