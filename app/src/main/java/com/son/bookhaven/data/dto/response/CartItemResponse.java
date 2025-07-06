@@ -1,4 +1,4 @@
-package com.son.bookhaven.data.dto;
+package com.son.bookhaven.data.dto.response;
 
 import com.son.bookhaven.data.model.Book;
 import com.son.bookhaven.data.model.BookImage;

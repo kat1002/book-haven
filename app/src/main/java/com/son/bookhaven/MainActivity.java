@@ -17,6 +17,7 @@ import com.son.bookhaven.ui.fragments.HomeFragment;
 import com.son.bookhaven.ui.fragments.ExploreFragment;
 import com.son.bookhaven.ui.fragments.CartFragment;
 import com.son.bookhaven.ui.fragments.ProfileFragment;
+import com.son.bookhaven.ui.fragments.SignUpFragment;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
     private final ExploreFragment exploreFragment = new ExploreFragment();
     private final CartFragment cartFragment = new CartFragment();
     private final ProfileFragment profileFragment = new ProfileFragment();
+    private final SignUpFragment signUpFragment = new SignUpFragment();
     private BadgeDrawable cartBadge;
     private int cartItemCount = 3; // Updated to match your cart layout (3 items)
 
@@ -37,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
         bottomNavigationView = findViewById(R.id.bottom_navigation);
 
         // Set default fragment
-        replaceFragment(homeFragment);
+        replaceFragment(signUpFragment);
 
         setupCartBadge();
 

@@ -10,9 +10,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textview.MaterialTextView;
 import com.son.bookhaven.R;
-import com.son.bookhaven.data.dto.CartItemResponse;
-import com.son.bookhaven.data.model.CartItem;
-import com.son.bookhaven.data.model.Book; // Added this import, assuming CartItem uses it
+import com.son.bookhaven.data.dto.response.CartItemResponse;
 
 import java.util.ArrayList; // <--- IMPORT ArrayList
 import java.util.List;

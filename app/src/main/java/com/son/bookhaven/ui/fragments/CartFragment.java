@@ -1,6 +1,5 @@
 package com.son.bookhaven.ui.fragments;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -15,22 +14,14 @@ import com.google.android.material.snackbar.Snackbar;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.CartApiService;
 import com.son.bookhaven.data.adapters.CartAdapter;
-import com.son.bookhaven.data.dto.CartItemResponse;
-import com.son.bookhaven.data.model.Author;
-import com.son.bookhaven.data.model.Book;
-import com.son.bookhaven.data.model.BookImage;
-import com.son.bookhaven.data.model.CartItem;
-import com.son.bookhaven.data.model.LanguageCode;
+import com.son.bookhaven.data.dto.response.CartItemResponse;
 import com.son.bookhaven.databinding.FragmentCartBinding; // Make sure ViewBinding is enabled and package correct
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import retrofit2.Call;
