@@ -1,4 +1,4 @@
-package com.son.bookhaven.ui.fragments; // Adjust your package name as needed
+package com.son.bookhaven.ui.fragments;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -6,12 +6,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.constraintlayout.widget.ConstraintLayout; // Import ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -19,44 +20,75 @@ import androidx.fragment.app.FragmentTransaction;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
-import com.son.bookhaven.R; // Ensure this imports your R file correctly
-import com.son.bookhaven.data.model.User; // Assuming you have this User model
+import com.google.gson.Gson;
+import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.AccountApiService;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.AuthApiService;
+import com.son.bookhaven.authService.TokenManager;
+import com.son.bookhaven.data.dto.response.ErrorResponse;
+import com.son.bookhaven.data.model.User;
 
-// If you're loading profile images from a URL, you'll need Glide or Coil
-// import com.bumptech.glide.Glide; // For Glide
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ProfileFragment extends Fragment {
+
+    private static final String TAG = "ProfileFragment";
 
     private MaterialToolbar toolbar;
     private ShapeableImageView profileImage;
     private TextView profileName, profileEmail;
-    private MaterialButton btnEditProfile, btnLogOut, btnSignIn, btnSignUp; // Added btnSignIn, btnSignUp
+    private MaterialButton btnEditProfile, btnLogOut, btnSignIn, btnSignUp;
     private LinearLayout layoutOrderHistory, layoutAppSettings, layoutPrivacySecurity, layoutHelpSupport;
-    private ConstraintLayout groupLoggedInProfile; // Added reference to the logged-in profile group
-    private LinearLayout layoutAuthButtons; // Added reference to the auth buttons layout
+    private ConstraintLayout groupLoggedInProfile;
+    private LinearLayout layoutAuthButtons;
+    private ProgressBar progressBar;
 
-    // Dummy User for demonstration. In a real app, you'd fetch this from a ViewModel or repository.
-    private User currentUser; // This will determine if the user is logged in or not
+    // API service and token manager
+    private AuthApiService authApiService;
+    private AccountApiService accountApiService;
+    private TokenManager tokenManager;
+
+    // User data
+    private User currentUser;
 
     public ProfileFragment() {
         // Required empty public constructor
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        showBottomNavigation();
+    }
+
+    private void showBottomNavigation() {
+        if (getActivity() != null) {
+            View bottomNavigation = getActivity().findViewById(R.id.bottom_navigation);
+            if (bottomNavigation != null) {
+                bottomNavigation.setVisibility(View.VISIBLE);
+            }
+        }
+    }
+
+    @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_profile, container, false); // Make sure this matches your XML file name
+        View view = inflater.inflate(R.layout.fragment_profile, container, false);
 
         initViews(view);
+        initApiService();
         setupToolbar();
-        checkLoginStatusAndPopulateUI(); // Checks login status and populates UI accordingly
-        setupClickListeners(); // Set up click handlers for all interactive elements
+        setupClickListeners();
+        checkLoginStatusAndFetchUserData();
 
         return view;
     }
 
     private void initViews(View view) {
-        toolbar = view.findViewById(R.id.toolbar_cart); // Note: Your toolbar ID is toolbar_cart
+        toolbar = view.findViewById(R.id.toolbar_cart);
         profileImage = view.findViewById(R.id.profile_image);
         profileName = view.findViewById(R.id.profile_name);
         profileEmail = view.findViewById(R.id.profile_email);
@@ -68,171 +100,284 @@ public class ProfileFragment extends Fragment {
         layoutPrivacySecurity = view.findViewById(R.id.layout_privacy_security);
         layoutHelpSupport = view.findViewById(R.id.layout_help_support);
 
-        groupLoggedInProfile = view.findViewById(R.id.group_logged_in_profile); // Initialize
-        layoutAuthButtons = view.findViewById(R.id.layout_auth_buttons);       // Initialize
-        btnSignIn = view.findViewById(R.id.btn_sign_in);                       // Initialize
-        btnSignUp = view.findViewById(R.id.btn_sign_up);                       // Initialize
+        groupLoggedInProfile = view.findViewById(R.id.group_logged_in_profile);
+        layoutAuthButtons = view.findViewById(R.id.layout_auth_buttons);
+        btnSignIn = view.findViewById(R.id.btn_sign_in);
+        btnSignUp = view.findViewById(R.id.btn_sign_up);
+
+        // Progress bar (add this to your layout if not present)
+        progressBar = view.findViewById(R.id.progress_bar);
+
+        // Initialize TokenManager
+        tokenManager = new TokenManager(requireContext());
+    }
+
+    private void initApiService() {
+        authApiService = ApiClient.getClient().create(AuthApiService.class);
+        accountApiService = ApiClient.getClient().create(AccountApiService.class);
     }
 
     private void setupToolbar() {
         if (toolbar != null) {
-            // If you want a back button, uncomment and set navigationIcon
-            // toolbar.setNavigationIcon(R.drawable.ic_arrow_back); // Ensure you have this drawable
-            // toolbar.setNavigationOnClickListener(v -> {
-            //     if (getParentFragmentManager().getBackStackEntryCount() > 0) {
-            //         getParentFragmentManager().popBackStack();
-            //     } else {
-            //         requireActivity().onBackPressed();
-            //     }
-            // });
+            // Toolbar setup if needed
         }
     }
 
-    private void checkLoginStatusAndPopulateUI() {
-        // This is where you would get the actual login status from your auth system
-        // For demonstration:
-        // Set currentUser to null for logged out state, or to a User object for logged in state
-        // For testing logged-out state:
-        // currentUser = null;
-        // For testing logged-in state:
-        currentUser = new User("Sabrina Aryan", "sabrina.aryan@example.com", "0987654321", "https://picsum.photos/96"); // Dummy URL
+    private void checkLoginStatusAndFetchUserData() {
+        if (tokenManager.isLoggedIn()) {
+            // User is logged in, fetch user data from API
+            showLoadingState();
+            fetchUserInfo();
+        } else {
+            // No token, show login/signup options
+            showLoggedOutState();
+        }
+    }
+
+    private void fetchUserInfo() {
+        String token = tokenManager.getToken();
+        if (token == null) {
+            showLoggedOutState();
+            return;
+        }
+
+        Call<User> call = accountApiService.getMyInfo("Bearer " + token);
+
+        call.enqueue(new Callback<User>() {
+            @Override
+            public void onResponse(Call<User> call, Response<User> response) {
+                hideLoadingState();
+
+                if (response.isSuccessful() && response.body() != null) {
+                    currentUser = response.body();
+                    showLoggedInState();
+                    Log.d(TAG, "User info fetched successfully");
+                } else if (response.code() == 401) {
+                    // Token is invalid/expired
+                    handleTokenExpired();
+                } else {
+                    // Handle other errors
+                    handleApiError(response);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<User> call, Throwable t) {
+                hideLoadingState();
+                Log.e(TAG, "Failed to fetch user info", t);
+
+                // Show cached user data if available
+                if (tokenManager.isLoggedIn()) {
+                    showLoggedInStateFromCache();
+                    showToast("Using cached data. Please check your connection.");
+                } else {
+                    showLoggedOutState();
+                    showToast("Network error. Please check your connection.");
+                }
+            }
+        });
+    }
+
+    private void handleTokenExpired() {
+        tokenManager.clearUserData();
+        currentUser = null;
+        showLoggedOutState();
+        showToast("Session expired. Please login again.");
+        Log.d(TAG, "Token expired, user logged out");
+    }
+
+    private void handleApiError(Response<User> response) {
+        String errorMessage = "Failed to load user information";
+        if (response.errorBody() != null) {
+            try {
+                String errorBody = response.errorBody().string();
+                ErrorResponse errorResponse = new Gson().fromJson(errorBody, ErrorResponse.class);
+                errorMessage = errorResponse.getMessage();
+            } catch (Exception e) {
+                Log.e(TAG, "Error parsing error response", e);
+            }
+        }
+
+        // Show cached data if available
+        if (tokenManager.isLoggedIn()) {
+            showLoggedInStateFromCache();
+            showToast("Using cached data. " + errorMessage);
+        } else {
+            showLoggedOutState();
+            showToast(errorMessage);
+        }
+    }
+
+    private void showLoadingState() {
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+        groupLoggedInProfile.setVisibility(View.GONE);
+        layoutAuthButtons.setVisibility(View.GONE);
+        btnLogOut.setVisibility(View.GONE);
+    }
+
+    private void hideLoadingState() {
+        if (progressBar != null) {
+            progressBar.setVisibility(View.GONE);
+        }
+    }
+
+    private void showLoggedInState() {
+        groupLoggedInProfile.setVisibility(View.VISIBLE);
+        btnLogOut.setVisibility(View.VISIBLE);
+        layoutAuthButtons.setVisibility(View.GONE);
 
         if (currentUser != null) {
-            // User is logged in
-            groupLoggedInProfile.setVisibility(View.VISIBLE);
-            btnLogOut.setVisibility(View.VISIBLE);
-            layoutAuthButtons.setVisibility(View.GONE);
-
             profileName.setText(currentUser.getFullName());
             profileEmail.setText(currentUser.getEmail());
-
-            // Load profile image (using Glide as an example, otherwise use a default drawable)
-            // if (currentUser.getProfileImageUrl() != null && !currentUser.getProfileImageUrl().isEmpty()) {
-            //     Glide.with(this)
-            //          .load(currentUser.getProfileImageUrl())
-            //          .placeholder(R.drawable.ic_default_avatar)
-            //          .error(R.drawable.ic_default_avatar)
-            //          .into(profileImage);
-            // } else {
-            //     profileImage.setImageResource(R.drawable.ic_default_avatar);
-            // }
-            profileImage.setImageResource(R.drawable.ic_default_avatar); // Placeholder for now
-            // If you have a real image URL, you would load it here.
-            // Example for dynamic URL placeholder if you don't use Glide/Picasso and need a quick test:
-            // if (currentUser.getProfileImageUrl() != null && !currentUser.getProfileImageUrl().isEmpty()) {
-            //     // Note: Direct URL loading needs a library like Glide/Picasso for production
-            //     // This is just a conceptual placeholder
-            //     profileImage.setImageDrawable(null); // Clear previous image
-            //     // You'd need an async task or library to load from URL properly
-            // } else {
-            //     profileImage.setImageResource(R.drawable.ic_default_avatar);
-            // }
-
-
-            // Enable/disable logged-in specific options
-            layoutOrderHistory.setEnabled(true);
-            layoutOrderHistory.setClickable(true);
-            // ... other logged-in specific options
-        } else {
-            // User is NOT logged in
-            groupLoggedInProfile.setVisibility(View.GONE);
-            btnLogOut.setVisibility(View.GONE); // No logout button if not logged in
-            layoutAuthButtons.setVisibility(View.VISIBLE);
-
-            // You might want to disable options that require login
-            layoutOrderHistory.setEnabled(false);
-            layoutOrderHistory.setClickable(false);
-            // ... other options
-            Log.d("ProfileFragment", "User not logged in. Showing auth buttons.");
         }
+
+        // Skip image loading as requested
+        profileImage.setImageResource(R.drawable.ic_default_avatar);
+
+        // Enable logged-in specific options
+        enableLoggedInFeatures(true);
+    }
+
+    private void showLoggedInStateFromCache() {
+        groupLoggedInProfile.setVisibility(View.VISIBLE);
+        btnLogOut.setVisibility(View.VISIBLE);
+        layoutAuthButtons.setVisibility(View.GONE);
+
+        // Use cached data from TokenManager
+        profileName.setText(tokenManager.getFullName());
+        profileEmail.setText(""); // Email not stored in cache
+
+        // Skip image loading as requested
+        profileImage.setImageResource(R.drawable.ic_default_avatar);
+
+        // Enable logged-in specific options
+        enableLoggedInFeatures(true);
+    }
+
+    private void showLoggedOutState() {
+        groupLoggedInProfile.setVisibility(View.GONE);
+        btnLogOut.setVisibility(View.GONE);
+        layoutAuthButtons.setVisibility(View.VISIBLE);
+
+        // Disable options that require login
+        enableLoggedInFeatures(false);
+
+        Log.d(TAG, "User not logged in. Showing auth buttons.");
+    }
+
+    private void enableLoggedInFeatures(boolean enabled) {
+        layoutOrderHistory.setEnabled(enabled);
+        layoutOrderHistory.setClickable(enabled);
+        layoutOrderHistory.setAlpha(enabled ? 1.0f : 0.5f);
+
+        btnEditProfile.setEnabled(enabled);
+        btnEditProfile.setAlpha(enabled ? 1.0f : 0.5f);
     }
 
     private void setupClickListeners() {
-        // Click listeners for logged-in state (if visible)
+        // Click listeners for logged-in state
         btnEditProfile.setOnClickListener(v -> {
-            if (currentUser != null) {
+            if (tokenManager.isLoggedIn()) {
                 navigateToEditProfile();
             } else {
-                Toast.makeText(getContext(), R.string.not_logged_in_message, Toast.LENGTH_SHORT).show();
+                showToast("Please login first");
             }
         });
+
         btnLogOut.setOnClickListener(v -> handleLogout());
 
-        // Click listeners for not-logged-in state (if visible)
+        // Click listeners for not-logged-in state
         btnSignIn.setOnClickListener(v -> navigateToSignIn());
         btnSignUp.setOnClickListener(v -> navigateToSignUp());
 
-
-        // General settings/support options (might be available even if not logged in,
-        // or their logic might adapt if clicked when not logged in)
+        // General settings/support options
         layoutOrderHistory.setOnClickListener(v -> {
-            if (currentUser != null) {
+            if (tokenManager.isLoggedIn()) {
                 navigateToOrderHistory();
             } else {
-                Toast.makeText(getContext(), R.string.not_logged_in_message, Toast.LENGTH_SHORT).show();
+                showToast("Please login to view order history");
             }
         });
+
         layoutAppSettings.setOnClickListener(v -> navigateToAppSettings());
         layoutPrivacySecurity.setOnClickListener(v -> showToast("Privacy & Security clicked"));
         layoutHelpSupport.setOnClickListener(v -> showToast("Help & Support clicked"));
     }
 
-    private void navigateToAppSettings(){
+    // Navigation methods
+    private void navigateToAppSettings() {
         FragmentManager fragmentManager = getParentFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         AppSettingsFragment appSettingsFragment = new AppSettingsFragment();
-        fragmentTransaction.replace(R.id.frame_layout, appSettingsFragment); // Replace with your actual fragment container ID
+        fragmentTransaction.replace(R.id.frame_layout, appSettingsFragment);
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
     }
 
-    private void navigateToOrderHistory(){
+    private void navigateToOrderHistory() {
         FragmentManager fragmentManager = getParentFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         OrderHistoryFragment orderHistoryFragment = new OrderHistoryFragment();
-        fragmentTransaction.replace(R.id.frame_layout, orderHistoryFragment); // Replace with your actual fragment container ID
+        fragmentTransaction.replace(R.id.frame_layout, orderHistoryFragment);
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
     }
 
     private void navigateToEditProfile() {
-        EditProfileFragment editProfileFragment = EditProfileFragment.newInstance(currentUser);
-        FragmentManager fragmentManager = getParentFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.frame_layout, editProfileFragment); // Replace with your actual fragment container ID
-        fragmentTransaction.addToBackStack(null);
-        fragmentTransaction.commit();
+        if (currentUser != null) {
+            EditProfileFragment editProfileFragment = EditProfileFragment.newInstance(currentUser);
+            FragmentManager fragmentManager = getParentFragmentManager();
+            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+            fragmentTransaction.replace(R.id.frame_layout, editProfileFragment);
+            fragmentTransaction.addToBackStack(null);
+            fragmentTransaction.commit();
+        } else {
+            showToast("User data not available");
+        }
     }
 
     private void navigateToSignIn() {
         FragmentManager fragmentManager = getParentFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        LoginFragment loginFragment = new LoginFragment(); // Assuming you have a LoginFragment
-        fragmentTransaction.replace(R.id.frame_layout, loginFragment); // Replace with your actual fragment container ID
+        LoginFragment loginFragment = new LoginFragment();
+        fragmentTransaction.replace(R.id.frame_layout, loginFragment);
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
-        Toast.makeText(getContext(), "Navigate to Sign In", Toast.LENGTH_SHORT).show();
     }
 
     private void navigateToSignUp() {
         FragmentManager fragmentManager = getParentFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        SignUpFragment registerFragment = new SignUpFragment(); // Assuming you have a RegisterFragment
-        fragmentTransaction.replace(R.id.frame_layout, registerFragment); // Replace with your actual fragment container ID
+        SignUpFragment registerFragment = new SignUpFragment();
+        fragmentTransaction.replace(R.id.frame_layout, registerFragment);
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
-        Toast.makeText(getContext(), "Navigate to Sign Up", Toast.LENGTH_SHORT).show();
     }
 
     private void handleLogout() {
-        // In a real app, you would clear user session/token here
-        currentUser = null; // Clear current user for demonstration
-        checkLoginStatusAndPopulateUI(); // Update UI after logout
-        Toast.makeText(getContext(), "Logged out successfully.", Toast.LENGTH_SHORT).show();
-        Log.d("ProfileFragment", "User logged out.");
+        // Clear user session/token
+        tokenManager.clearUserData();
+        currentUser = null;
+
+        // Update UI after logout
+        showLoggedOutState();
+        if (getActivity() != null && isAdded()) {
+            getParentFragmentManager().beginTransaction()
+                    .replace(R.id.frame_layout, new LoginFragment())
+                    .commitAllowingStateLoss();
+        }
+        showToast("Logged out successfully.");
+        Log.d(TAG, "User logged out successfully");
     }
 
     private void showToast(String message) {
         Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
+    // Public method to refresh user data (can be called from other fragments after login)
+    public void refreshUserData() {
+        checkLoginStatusAndFetchUserData();
     }
 }
