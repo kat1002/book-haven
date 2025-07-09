@@ -51,7 +51,7 @@
                 android:layout_height="96dp"
                 android:src="@drawable/ic_no_orders"
                 android:alpha="0.6"
-                app:tint="@color/material_dynamic_primary0" />
+                app:tint="?attr/colorPrimary" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
