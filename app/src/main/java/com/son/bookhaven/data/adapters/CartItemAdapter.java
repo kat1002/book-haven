@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.textview.MaterialTextView;
 import com.son.bookhaven.R; // Assuming R is generated for your project, adjust if needed
+import com.son.bookhaven.data.dto.response.CartItemResponse;
 import com.son.bookhaven.data.model.CartItem;
 
 import java.math.BigDecimal;
@@ -20,10 +21,10 @@ import java.util.Locale;
 
 public class CartItemAdapter extends RecyclerView.Adapter<CartItemAdapter.ViewHolder> {
 
-    private List<CartItem> cartItems;
+    private List<CartItemResponse> cartItems;
     private NumberFormat currencyFormatter;
 
-    public CartItemAdapter(List<CartItem> cartItems) {
+    public CartItemAdapter(List<CartItemResponse> cartItems) {
         this.cartItems = cartItems;
         this.currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US); // Or your desired locale
     }
@@ -38,19 +39,19 @@ public class CartItemAdapter extends RecyclerView.Adapter<CartItemAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        CartItem item = cartItems.get(position);
+        CartItemResponse item = cartItems.get(position);
 
-        holder.textViewBookTitle.setText(item.getBook().getTitle());
+        holder.textViewBookTitle.setText(item.getTitle());
         // Accessing the first author's name from the Book's authors set (if available)
         // If there are multiple authors, you might want to join them or pick the primary one.
+
+        holder.textViewQuantity.setText(String.format(Locale.US, "Qty: %d", item.getQuantity())); // Format quantity
         String authorName = "";
-        if (item.getBook().getAuthors() != null && !item.getBook().getAuthors().isEmpty()) {
+        if (item.getAuthorName() != null && !item.getAuthorName().isEmpty()) {
             // Get the first author (example, adjust logic for multiple authors if needed)
-            authorName = item.getBook().getAuthors().iterator().next().getAuthorName();
+            authorName = item.getAuthorName().iterator().next();
         }
         holder.textViewBookAuthor.setText(authorName);
-        holder.textViewQuantity.setText(String.format(Locale.US, "Qty: %d", item.getQuantity())); // Format quantity
-
         BigDecimal itemTotalPrice = item.getTotalPrice();
         holder.textViewItemPrice.setText(currencyFormatter.format(itemTotalPrice));
 

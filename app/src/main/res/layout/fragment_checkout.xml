@@ -21,7 +21,7 @@
             app:title="@string/checkout_title"
             app:titleCentered="true"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:navigationIconTint="@color/material_dynamic_primary0"/>
+            app:navigationIconTint="?attr/colorPrimary"/>
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -95,6 +95,27 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutEmail"
+                style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                android:hint="@string/email_hint"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textInputLayoutPhone">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/textInputEditTextEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textEmailAddress"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/textInputLayoutProvince"
                 style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                 android:layout_width="0dp"
@@ -105,7 +126,7 @@
                 android:hint="@string/province_hint"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textInputLayoutPhone">
+                app:layout_constraintTop_toBottomOf="@+id/textInputLayoutEmail">
 
                 <AutoCompleteTextView
                     android:id="@+id/autoCompleteTextViewProvince"
@@ -360,5 +381,19 @@
         app:cornerRadius="12dp"/>
 
 </LinearLayout>
+    <!-- Loading Overlay -->
+    <FrameLayout
+        android:id="@+id/loadingOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
 
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"/>
+    </FrameLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>

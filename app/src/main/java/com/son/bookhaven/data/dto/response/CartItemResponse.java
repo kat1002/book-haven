@@ -17,6 +17,7 @@ public class CartItemResponse implements Serializable {
     private List<String> bookImages;
     private Boolean isSelected; // Có thể null theo API, nên dùng Boolean thay vì boolean
 
+    private List<String> authorName;
     // Constructors
     public CartItemResponse() {}
 
@@ -32,6 +33,16 @@ public class CartItemResponse implements Serializable {
     }
 
     // Getter và Setter
+
+
+    public List<String> getAuthorName() {
+        return authorName;
+    }
+
+    public void setAuthorName(List<String> authorName) {
+        this.authorName = authorName;
+    }
+
     public int getCartItemId() {
         return cartItemId;
     }

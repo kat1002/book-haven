@@ -2,6 +2,9 @@ package com.son.bookhaven.ui.fragments; // Adjust package as necessary
 
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +14,9 @@ import android.widget.AutoCompleteTextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -20,8 +26,18 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.textview.MaterialTextView;
+import com.son.bookhaven.MainActivity;
 import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.AddressApiClient;
+import com.son.bookhaven.apiHelper.AddressApiService;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.CheckOutService;
 import com.son.bookhaven.data.adapters.CartItemAdapter; // Assuming this is your adapter package
+import com.son.bookhaven.data.dto.request.CheckOutRequest;
+import com.son.bookhaven.data.dto.response.CartItemResponse;
+import com.son.bookhaven.data.dto.response.DistrictResponse;
+import com.son.bookhaven.data.dto.response.ProvinceResponse;
+import com.son.bookhaven.data.dto.response.WardResponse;
 import com.son.bookhaven.data.model.Author;
 import com.son.bookhaven.data.model.Book;
 import com.son.bookhaven.data.model.BookImage; // Ensure this is imported if used
@@ -37,12 +53,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class CheckoutFragment extends Fragment {
 
     private RecyclerView recyclerViewCartItems;
     private CartItemAdapter cartItemAdapter;
-    private List<CartItem> currentCartItems;
 
+
+    private List<CartItemResponse> cartItems = new ArrayList<>();
     private MaterialTextView textViewSubtotalValue;
     private MaterialTextView textViewShippingValue;
     private MaterialTextView textViewTotalValue;
@@ -57,7 +78,7 @@ public class CheckoutFragment extends Fragment {
     private TextInputEditText textInputEditTextRecipientName;
     private TextInputEditText textInputEditTextPhone;
     private TextInputEditText textInputEditTextNote;
-
+    private TextInputEditText textInputEditTextEmail;
     private TextInputLayout textInputLayoutProvince;
     private TextInputLayout textInputLayoutDistrict;
     private TextInputLayout textInputLayoutWard;
@@ -79,6 +100,9 @@ public class CheckoutFragment extends Fragment {
         // Initialize formatter and API here
         currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US); // Or your desired locale
         //vnAddressAPI = new VNAddressAPI(); // Initialize the mock API
+        if (getArguments() != null && getArguments().containsKey("cart_items")) {
+            cartItems = (List<CartItemResponse>) getArguments().getSerializable("cart_items");
+        }
     }
 
     @Override
@@ -99,6 +123,7 @@ public class CheckoutFragment extends Fragment {
         textInputLayoutRecipientName = view.findViewById(R.id.textInputLayoutRecipientName);
         textInputEditTextRecipientName = view.findViewById(R.id.textInputEditTextRecipientName);
         textInputLayoutPhone = view.findViewById(R.id.textInputLayoutPhone);
+        textInputEditTextEmail = view.findViewById(R.id.textInputEditTextEmail);
         textInputEditTextPhone = view.findViewById(R.id.textInputEditTextPhone);
         textInputLayoutProvince = view.findViewById(R.id.textInputLayoutProvince);
         autoCompleteTextViewProvince = view.findViewById(R.id.autoCompleteTextViewProvince);
@@ -127,53 +152,158 @@ public class CheckoutFragment extends Fragment {
 
         // Setup RecyclerView
         recyclerViewCartItems.setLayoutManager(new LinearLayoutManager(getContext()));
-        currentCartItems = generateDummyCartItems(); // Replace with actual data fetch
-        cartItemAdapter = new CartItemAdapter(currentCartItems);
+        // Use the cart items from arguments instead of generating dummy data
+
+
+
+        cartItemAdapter = new CartItemAdapter(cartItems);
         recyclerViewCartItems.setAdapter(cartItemAdapter);
 
-        // Calculate and display summary
         updateOrderSummary();
+        setupAddressSelection();
 
-        // Setup Address Pickers
-        setupAddressPickers();
 
-        /*
-        // Set up Place Order button click listener
         buttonPlaceOrder.setOnClickListener(v -> {
-            // Validate inputs
             if (validateInputs()) {
-                // Collect address data
-                String recipientName = textInputEditTextRecipientName.getText().toString().trim();
-                String phone = textInputEditTextPhone.getText().toString().trim();
-                String street = textInputEditTextStreet.getText().toString().trim();
-                String note = textInputEditTextNote.getText().toString().trim();
-
-                //String provinceName = selectedProvince != null ? selectedProvince.getName() : "";
-                //String districtName = selectedDistrict != null ? selectedDistrict.getName() : "";
-                //String wardName = selectedWard != null ? selectedWard.getName() : "";
-
-                //DeliveryAddress deliveryAddress = new DeliveryAddress(
-                //        recipientName, phone, provinceName, districtName, wardName, street, note
-                //);
-
-                // For demonstration, show a Snackbar with the collected address
-                Snackbar.make(view, "Order Placed! Delivery to: \n" + deliveryAddress.toString(), Snackbar.LENGTH_LONG)
-                        .setAction("Dismiss", v1 -> {})
-                        .show();
-                // In a real app, you would create an Order object and send it to your backend
+                showOrderConfirmationDialog();
             } else {
-                Snackbar.make(view, "Please fill in all required address fields.", Snackbar.LENGTH_SHORT).show();
+                Snackbar.make(view, "Please fill in all required fields", Snackbar.LENGTH_SHORT).show();
             }
         });
-        */
+
     }
+
+
+
+    private void setupAddressSelection() {
+        // Show loading for provinces
+        showLoading(true);
+
+        // Get provinces from API
+        AddressApiService addressApiService = AddressApiClient.getAddressService();
+        addressApiService.getProvinces().enqueue(new Callback<List<ProvinceResponse>>() {
+            @Override
+            public void onResponse(Call<List<ProvinceResponse>> call, Response<List<ProvinceResponse>> response) {
+                showLoading(false);
+
+                if (response.isSuccessful() && response.body() != null) {
+                    List<ProvinceResponse> provinces = response.body();
+
+                    // Create adapter for provinces
+                    ArrayAdapter<ProvinceResponse> provinceAdapter = new ArrayAdapter<>(
+                            requireContext(),
+                            R.layout.dropdown_item,
+                            provinces);
+
+                    autoCompleteTextViewProvince.setAdapter(provinceAdapter);
+
+                    // Set up district selection based on province
+                    autoCompleteTextViewProvince.setOnItemClickListener((parent, view, position, id) -> {
+                        ProvinceResponse selectedProvince = (ProvinceResponse) parent.getItemAtPosition(position);
+
+                        // Clear district and ward selections
+                        autoCompleteTextViewDistrict.setText("");
+                        autoCompleteTextViewWard.setText("");
+
+                        // Show loading for districts
+                        showLoading(true);
+
+                        // Get districts for selected province
+                        addressApiService.getDistricts(selectedProvince.getCode())
+                                .enqueue(new Callback<ProvinceResponse>() {
+                                    @Override
+                                    public void onResponse(Call<ProvinceResponse> call, Response<ProvinceResponse> response) {
+                                        showLoading(false);
+
+                                        if (response.isSuccessful() && response.body() != null) {
+                                            List<DistrictResponse> districts = response.body().getDistricts();
+
+                                            // Create adapter for districts
+                                            ArrayAdapter<DistrictResponse> districtAdapter = new ArrayAdapter<>(
+                                                    requireContext(),
+                                                    R.layout.dropdown_item,
+                                                    districts);
+
+                                            autoCompleteTextViewDistrict.setAdapter(districtAdapter);
+                                        } else {
+                                            Snackbar.make(requireView(), "Failed to load districts", Snackbar.LENGTH_SHORT).show();
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onFailure(Call<ProvinceResponse> call, Throwable t) {
+                                        showLoading(false);
+                                        Snackbar.make(requireView(), "Network error: " + t.getMessage(), Snackbar.LENGTH_SHORT).show();
+                                    }
+                                });
+                    });
+
+                    // Set up ward selection based on district
+                    autoCompleteTextViewDistrict.setOnItemClickListener((parent, view, position, id) -> {
+                        DistrictResponse selectedDistrict = (DistrictResponse) parent.getItemAtPosition(position);
+
+                        // Clear ward selection
+                        autoCompleteTextViewWard.setText("");
+
+                        // Show loading for wards
+                        showLoading(true);
+
+                        // Get wards for selected district
+                        addressApiService.getWards(selectedDistrict.getCode())
+                                .enqueue(new Callback<DistrictResponse>() {
+                                    @Override
+                                    public void onResponse(Call<DistrictResponse> call, Response<DistrictResponse> response) {
+                                        showLoading(false);
+
+                                        if (response.isSuccessful() && response.body() != null) {
+                                            List<WardResponse> wards = response.body().getWards();
+
+                                            // Create adapter for wards
+                                            ArrayAdapter<WardResponse> wardAdapter = new ArrayAdapter<>(
+                                                    requireContext(),
+                                                    R.layout.dropdown_item,
+                                                    wards);
+
+                                            autoCompleteTextViewWard.setAdapter(wardAdapter);
+                                        } else {
+                                            Snackbar.make(requireView(), "Failed to load wards", Snackbar.LENGTH_SHORT).show();
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onFailure(Call<DistrictResponse> call, Throwable t) {
+                                        showLoading(false);
+                                        Snackbar.make(requireView(), "Network error: " + t.getMessage(), Snackbar.LENGTH_SHORT).show();
+                                    }
+                                });
+                    });
+                } else {
+                    Snackbar.make(requireView(), "Failed to load provinces", Snackbar.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<ProvinceResponse>> call, Throwable t) {
+                showLoading(false);
+                Snackbar.make(requireView(), "Network error: " + t.getMessage(), Snackbar.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showLoading(boolean isLoading) {
+        View loadingOverlay = getView().findViewById(R.id.loadingOverlay);
+        if (loadingOverlay != null) {
+            loadingOverlay.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        }
+    }
+
 
     /**
      * Calculates and updates the order summary (subtotal, shipping, total).
      */
     private void updateOrderSummary() {
         BigDecimal subtotal = BigDecimal.ZERO;
-        for (CartItem item : currentCartItems) {
+        for (CartItemResponse item : cartItems) {
             subtotal = subtotal.add(item.getTotalPrice());
         }
 
@@ -187,124 +317,75 @@ public class CheckoutFragment extends Fragment {
     /**
      * Sets up the AutoCompleteTextViews for Province, District, and Ward selection.
      */
-    private void setupAddressPickers() {
-        // Provinces
-        //List<Province> provinces = vnAddressAPI.getProvinces();
-        //ArrayAdapter<Province> provinceAdapter = new ArrayAdapter<>(
-        //        requireContext(),
-        //        android.R.layout.simple_dropdown_item_1line, // Simple layout for dropdown
-        //        provinces
-        //);
-        //autoCompleteTextViewProvince.setAdapter(provinceAdapter);
-
-        //autoCompleteTextViewProvince.setOnItemClickListener((parent, view, position, id) -> {
-        //    selectedProvince = (Province) parent.getItemAtPosition(position);
-        //    // Clear and reset dependent fields
-        //    selectedDistrict = null;
-        //    selectedWard = null;
-        //    autoCompleteTextViewDistrict.setText("");
-        //    autoCompleteTextViewWard.setText("");
-        //    textInputLayoutDistrict.setEnabled(true);
-        //    textInputLayoutWard.setEnabled(false); // Disable ward until district is chosen
-        //    populateDistricts(selectedProvince.getCode());
-        //});
-
-        // Districts (initially disabled)
-        //textInputLayoutDistrict.setEnabled(false);
-        //autoCompleteTextViewDistrict.setOnItemClickListener((parent, view, position, id) -> {
-        //    selectedDistrict = (District) parent.getItemAtPosition(position);
-        //    // Clear and reset dependent fields
-        //    selectedWard = null;
-        //    autoCompleteTextViewWard.setText("");
-        //    textInputLayoutWard.setEnabled(true);
-        //    populateWards(selectedDistrict.getCode());
-        //});
-
-        // Wards (initially disabled)
-        //textInputLayoutWard.setEnabled(false);
-        //autoCompleteTextViewWard.setOnItemClickListener((parent, view, position, id) -> {
-        //    selectedWard = (Ward) parent.getItemAtPosition(position);
-        //});
-    }
-
-    /**
-     * Populates the district AutoCompleteTextView based on the selected province.
-     * @param provinceCode The code of the selected province.
-     */
-    //private void populateDistricts(String provinceCode) {
-    //    List<District> districts = vnAddressAPI.getDistrictsByProvince(provinceCode);
-    //    ArrayAdapter<District> districtAdapter = new ArrayAdapter<>(
-    //            requireContext(),
-    //            android.R.layout.simple_dropdown_item_1line,
-    //            districts
-    //    );
-    //    autoCompleteTextViewDistrict.setAdapter(districtAdapter);
-    //    // Show dropdown immediately after population
-    //    autoCompleteTextViewDistrict.showDropDown();
-    //}
-
-    /**
-     * Populates the ward AutoCompleteTextView based on the selected district.
-     * @param districtCode The code of the selected district.
-     */
-    //private void populateWards(String districtCode) {
-    //    List<Ward> wards = vnAddressAPI.getWardsByDistrict(districtCode);
-    //    ArrayAdapter<Ward> wardAdapter = new ArrayAdapter<>(
-    //            requireContext(),
-    //            android.R.layout.simple_dropdown_item_1line,
-    //            wards
-    //    );
-    //    autoCompleteTextViewWard.setAdapter(wardAdapter);
-    //    // Show dropdown immediately after population
-    //    autoCompleteTextViewWard.showDropDown();
-    //}
-
-    /**
-     * Validates that all required input fields for delivery address are filled.
-     * @return true if all required fields are valid, false otherwise.
-     */
-
-    /*
     private boolean validateInputs() {
         boolean isValid = true;
 
+        // Validate recipient name
         if (textInputEditTextRecipientName.getText().toString().trim().isEmpty()) {
-            textInputLayoutRecipientName.setError("Recipient name is required.");
+            textInputLayoutRecipientName.setError("Recipient name is required");
             isValid = false;
         } else {
             textInputLayoutRecipientName.setError(null);
         }
 
-        if (textInputEditTextPhone.getText().toString().trim().isEmpty()) {
-            textInputLayoutPhone.setError("Phone number is required.");
+        // Validate phone number
+        String phoneNumber = textInputEditTextPhone.getText().toString().trim();
+        if (phoneNumber.isEmpty()) {
+            textInputLayoutPhone.setError("Phone number is required");
+            isValid = false;
+        } else if (phoneNumber.length() < 10 || phoneNumber.length() > 15) {
+            textInputLayoutPhone.setError("Phone number must be between 10 and 15 digits");
             isValid = false;
         } else {
             textInputLayoutPhone.setError(null);
         }
 
-        if (selectedProvince == null) {
-            textInputLayoutProvince.setError("Province/City is required.");
+        // Validate email
+        String email = textInputEditTextEmail.getText().toString().trim();
+        if (email.isEmpty()) {
+            TextInputLayout textInputLayoutEmail = (TextInputLayout) textInputEditTextEmail.getParent().getParent();
+            textInputLayoutEmail.setError("Email is required");
+            isValid = false;
+        } else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            TextInputLayout textInputLayoutEmail = (TextInputLayout) textInputEditTextEmail.getParent().getParent();
+            textInputLayoutEmail.setError("Please enter a valid email address");
+            isValid = false;
+        } else {
+            TextInputLayout textInputLayoutEmail = (TextInputLayout) textInputEditTextEmail.getParent().getParent();
+            textInputLayoutEmail.setError(null);
+        }
+
+        // Validate province/city
+        if (autoCompleteTextViewProvince.getText().toString().trim().isEmpty()) {
+            textInputLayoutProvince.setError("City is required");
             isValid = false;
         } else {
             textInputLayoutProvince.setError(null);
         }
 
-        if (selectedDistrict == null) {
-            textInputLayoutDistrict.setError("District is required.");
+        // Validate district
+        if (autoCompleteTextViewDistrict.getText().toString().trim().isEmpty()) {
+            textInputLayoutDistrict.setError("District is required");
             isValid = false;
         } else {
             textInputLayoutDistrict.setError(null);
         }
 
-        if (selectedWard == null) {
-            textInputLayoutWard.setError("Ward is required.");
+        // Validate ward
+        if (autoCompleteTextViewWard.getText().toString().trim().isEmpty()) {
+            textInputLayoutWard.setError("Ward is required");
             isValid = false;
         } else {
             textInputLayoutWard.setError(null);
         }
 
-        if (textInputEditTextStreet.getText().toString().trim().isEmpty()) {
-            textInputLayoutStreet.setError("Street address is required.");
+        // Validate street address
+        String street = textInputEditTextStreet.getText().toString().trim();
+        if (street.isEmpty()) {
+            textInputLayoutStreet.setError("Street address is required");
+            isValid = false;
+        } else if (street.length() < 5) {
+            textInputLayoutStreet.setError("Street address must be at least 5 characters");
             isValid = false;
         } else {
             textInputLayoutStreet.setError(null);
@@ -312,159 +393,126 @@ public class CheckoutFragment extends Fragment {
 
         return isValid;
     }
-    */
-
-    /**
-     * Generates dummy cart items for demonstration purposes.
-     * In a real application, this data would come from your backend or local storage.
-     * @return A list of dummy CartItem objects.
-     */
-    private List<CartItem> generateDummyCartItems() {
-        List<CartItem> dummyItems = new ArrayList<>();
-
-        // Book 1: The Silent Echo
-        Book book1 = new Book();
-        book1.setBookId(1);
-        book1.setTitle("The Silent Echo");
-        book1.setPublisherId(101);
-        book1.setCategoryId(1);
-        book1.setPublicationYear(2023);
-        book1.setPrice(new BigDecimal("19.99"));
-        book1.setIsbn("978-0-123456-78-9");
-        book1.setLanguage(LanguageCode.English);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book1.setCreatedAt(LocalDateTime.now().minusDays(30));
+    private void showOrderConfirmationDialog() {
+        // Calculate the total for confirmation message
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (CartItemResponse item : cartItems) {
+            subtotal = subtotal.add(item.getTotalPrice());
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book1.setUpdatedAt(LocalDateTime.now().minusDays(5));
+        BigDecimal total = subtotal.add(SHIPPING_COST);
+        String formattedTotal = currencyFormatter.format(total);
+
+        // Create an AlertDialog
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Confirm Order")
+                .setMessage("Are you sure you want to place this order for " + formattedTotal + "?")
+                .setPositiveButton("Yes, Place Order", (dialog, which) -> {
+                    // User confirmed, proceed with order processing
+                    processOrder();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    // User cancelled the dialog
+                    dialog.dismiss();
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
+
+
+
+    private void processOrder() {
+        // Get values from input fields
+        String recipientName = textInputEditTextRecipientName.getText().toString().trim();
+        String phoneNumber = textInputEditTextPhone.getText().toString().trim();
+        String street = textInputEditTextStreet.getText().toString().trim();
+        String note = textInputEditTextNote.getText().toString().trim();
+        String city = autoCompleteTextViewProvince.getText().toString().trim();
+        String district = autoCompleteTextViewDistrict.getText().toString().trim();
+        String ward = autoCompleteTextViewWard.getText().toString().trim();
+        String email = textInputEditTextEmail.getText().toString().trim();
+
+        // Create checkout request
+        CheckOutRequest checkoutRequest = new CheckOutRequest();
+        checkoutRequest.setRecipientName(recipientName);
+        checkoutRequest.setPhoneNumber(phoneNumber);
+        checkoutRequest.setNote(note);
+        checkoutRequest.setPaymentMethod((byte) 1); // Default payment method
+        checkoutRequest.setCity(city);
+        checkoutRequest.setWard(ward);
+        checkoutRequest.setStreet(street);
+        checkoutRequest.setDistrict(district);
+        checkoutRequest.setEmail(email);
+
+        // Extract cart item IDs
+        List<Integer> cartItemIds = new ArrayList<>();
+        for (CartItemResponse item : cartItems) {
+            cartItemIds.add(item.getCartItemId());
         }
+        checkoutRequest.setCartItemIds(cartItemIds);
 
-        // Add authors for book1
-        Set<Author> authors1 = new HashSet<>();
-        Author author1 = new Author();
-        author1.setAuthorId(1);
-        author1.setAuthorName("Sarah Johnson");
-        authors1.add(author1);
-        book1.setAuthors(authors1);
-
-        List<BookImage> bookImages1 = new ArrayList<>();
-        BookImage bookImage1 = new BookImage();
-        bookImage1.setBookImageId(1);
-        bookImage1.setImageUrl("https://picsum.photos/200/300?random=1"); // Placeholder image
-        bookImages1.add(bookImage1);
-        book1.setBookImages(bookImages1);
-
-
-        // Book 2: Digital Dreams
-        Book book2 = new Book();
-        book2.setBookId(2);
-        book2.setTitle("Digital Dreams");
-        book2.setPublisherId(102);
-        book2.setCategoryId(2);
-        book2.setPublicationYear(2024);
-        book2.setPrice(new BigDecimal("24.99"));
-        book2.setIsbn("978-0-234567-89-0");
-        book2.setLanguage(LanguageCode.English);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book2.setCreatedAt(LocalDateTime.now().minusDays(25));
+        // Show loading indicator
+        View loadingOverlay = getView().findViewById(R.id.loadingOverlay);
+        if (loadingOverlay != null) {
+            loadingOverlay.setVisibility(View.VISIBLE);
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book2.setUpdatedAt(LocalDateTime.now().minusDays(3));
-        }
+        CheckOutService checkOutService = ApiClient.getAuthenticatedClient(requireContext()).create(CheckOutService.class);
+        // Make API call to place order
+        checkOutService
+                .placeOrder(checkoutRequest)
+                .enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        // Hide loading indicator
+                        if (loadingOverlay != null) {
+                            loadingOverlay.setVisibility(View.GONE);
+                        }
 
-        // Add authors for book2
-        Set<Author> authors2 = new HashSet<>();
-        Author author2 = new Author();
-        author2.setAuthorId(2);
-        author2.setAuthorName("Alex Chen");
-        authors2.add(author2);
-        book2.setAuthors(authors2);
-        // Assuming book2 also uses bookImages1 for simplicity or define new ones
-        book2.setBookImages(bookImages1);
+                        if (response.isSuccessful()) {
+                            // Show success message
+                            Snackbar.make(requireView(), "Order placed successfully!", Snackbar.LENGTH_LONG).show();
 
+                            // Navigate to order confirmation or back to home
+                            // At the end of processOrder() method, replace the navigation code with:
+                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                // Clear cart after successful order
+                                if (getActivity() instanceof MainActivity) {
+                                    MainActivity mainActivity = (MainActivity) getActivity();
+                                    mainActivity.clearCart(); // Clear cart count badge
 
-        // Book 3: Ocean's Mystery
-        Book book3 = new Book();
-        book3.setBookId(3);
-        book3.setTitle("Ocean's Mystery");
-        book3.setPublisherId(103);
-        book3.setCategoryId(3);
-        book3.setPublicationYear(2023);
-        book3.setPrice(new BigDecimal("21.99"));
-        book3.setIsbn("978-0-345678-90-1");
-        book3.setLanguage(LanguageCode.English);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book3.setCreatedAt(LocalDateTime.now().minusDays(20));
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book3.setUpdatedAt(LocalDateTime.now().minusDays(2));
-        }
+                                    // Navigate to OrderHistoryFragment
+                                    Fragment orderHistoryFragment = new OrderHistoryFragment();
+                                    mainActivity.replaceFragment(orderHistoryFragment);
+                                } else {
+                                    // Fallback
+                                    if (getActivity() != null) {
+                                        getActivity().onBackPressed();
+                                    }
+                                }
+                            }, 1500);
+                        } else {
+                            // Show error message
+                            try {
+                                String errorBody = response.errorBody().string();
+                                Snackbar.make(requireView(),
+                                        "Failed to place order: " + errorBody, Snackbar.LENGTH_LONG).show();
+                            } catch (Exception e) {
+                                Snackbar.make(requireView(),
+                                        "Failed to place order", Snackbar.LENGTH_LONG).show();
+                            }
+                        }
+                    }
 
-        // Add authors for book3
-        Set<Author> authors3 = new HashSet<>();
-        Author author3 = new Author();
-        author3.setAuthorId(3);
-        author3.setAuthorName("Maria Rodriguez");
-        authors3.add(author3);
-        book3.setAuthors(authors3);
-        book3.setBookImages(bookImages1);
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        // Hide loading indicator
+                        if (loadingOverlay != null) {
+                            loadingOverlay.setVisibility(View.GONE);
+                        }
 
-        // Book 4: City Lights
-        Book book4 = new Book();
-        book4.setBookId(4);
-        book4.setTitle("City Lights");
-        book4.setPublisherId(104);
-        book4.setCategoryId(4);
-        book4.setPublicationYear(2024);
-        book4.setPrice(new BigDecimal("18.99"));
-        book4.setIsbn("978-0-456789-01-2");
-        book4.setLanguage(LanguageCode.English);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book4.setCreatedAt(LocalDateTime.now().minusDays(15));
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book4.setUpdatedAt(LocalDateTime.now().minusDays(1));
-        }
-
-        // Add authors for book4
-        Set<Author> authors4 = new HashSet<>();
-        Author author4 = new Author();
-        author4.setAuthorId(4);
-        author4.setAuthorName("David Kim");
-        authors4.add(author4);
-        book4.setAuthors(authors4);
-        book4.setBookImages(bookImages1);
-
-        // Dummy CartItems
-        CartItem cartItem1 = new CartItem(book1, 2, true);
-        cartItem1.setCartItemId(101);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            cartItem1.setCreatedAt(LocalDateTime.now());
-        }
-
-        CartItem cartItem2 = new CartItem(book2, 1, true);
-        cartItem2.setCartItemId(102);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            cartItem2.setCreatedAt(LocalDateTime.now());
-        }
-
-        CartItem cartItem3 = new CartItem(book3, 3, true);
-        cartItem3.setCartItemId(103);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            cartItem3.setCreatedAt(LocalDateTime.now());
-        }
-
-        CartItem cartItem4 = new CartItem(book4, 1, true);
-        cartItem4.setCartItemId(104);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            cartItem4.setCreatedAt(LocalDateTime.now());
-        }
-
-        dummyItems.add(cartItem1);
-        dummyItems.add(cartItem2);
-        dummyItems.add(cartItem3);
-        dummyItems.add(cartItem4);
-
-        return dummyItems;
+                        // Show error message
+                        Snackbar.make(requireView(),
+                                "Network error: " + t.getMessage(), Snackbar.LENGTH_LONG).show();
+                    }
+                });
     }
 }

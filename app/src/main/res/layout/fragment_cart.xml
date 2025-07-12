@@ -52,10 +52,10 @@
                 android:layout_weight="1" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_cart_action" style="@style/Widget.Material3.Button.IconButton"
+                android:id="@+id/btn_cart_action_delete" style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                app:icon="@drawable/ic_shopping_cart"
+                app:icon="@drawable/ic_trash"
                 app:iconTint="?attr/colorOnSurface"
                 android:contentDescription="@string/shopping_cart" />
 
