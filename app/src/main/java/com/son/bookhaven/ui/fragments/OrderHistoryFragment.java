@@ -2,8 +2,6 @@ package com.son.bookhaven.ui.fragments; // Adjust your package name
 
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,14 +20,22 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.OrderService;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.PagedResult;
+import com.son.bookhaven.data.dto.OrderResponse;
+import com.son.bookhaven.data.dto.OrderDetailResponse;
 import com.son.bookhaven.data.adapters.OrderAdapter;
 import com.son.bookhaven.data.model.Order;
 import com.son.bookhaven.data.model.OrderDetail;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrderClickListener {
 
@@ -42,6 +48,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
 
     private OrderAdapter orderAdapter;
     private List<Order> orderList;
+    private OrderService orderService;
 
     public OrderHistoryFragment() {
         // Required empty public constructor
@@ -84,67 +91,78 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         orderAdapter = new OrderAdapter(getContext(), orderList, this); // 'this' implements OnOrderClickListener
         rvOrderHistory.setLayoutManager(new LinearLayoutManager(getContext()));
         rvOrderHistory.setAdapter(orderAdapter);
+        
+        // Initialize API service
+        orderService = ApiClient.getClient().create(OrderService.class);
     }
 
     private void loadOrderHistory() {
         showLoadingState();
 
-        // Simulate a network/database call
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            // --- Dummy Data for Demonstration ---
-            List<Order> dummyOrders = new ArrayList<>();
+        // Mock userId = 3 for testing
+        int userId = 3;
+        int page = 1;
+        int pageSize = 10;
 
-            // Example Order 1
-            Order order1 = new Order();
-            order1.setOderId(123456);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order1.setOrderDate(LocalDateTime.now().minusDays(10));
+        Call<ApiResponse<PagedResult<OrderResponse>>> call = orderService.getUserOrders(userId, page, pageSize);
+        call.enqueue(new Callback<ApiResponse<PagedResult<OrderResponse>>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<PagedResult<OrderResponse>>> call, Response<ApiResponse<PagedResult<OrderResponse>>> response) {
+                Log.d(TAG, "Response body: " + response.body());
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    ApiResponse<PagedResult<OrderResponse>> apiResponse = response.body();
+                    PagedResult<OrderResponse> pagedResult = apiResponse.getData();
+                    
+                    if (pagedResult != null && pagedResult.getItems() != null) {
+                        List<OrderResponse> orderResponses = pagedResult.getItems();
+                        Log.d(TAG, "OrderResponses: " + orderResponses.size() + " items");
+
+                        // Convert API response to UI models
+                        List<Order> orders = convertToOrderList(orderResponses);
+                        
+                        // Update UI on main thread
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                orderAdapter.updateOrders(orders);
+                                updateUIState(orders.isEmpty());
+                                Log.d(TAG, "Order history loaded from API. Count: " + orders.size());
+                            });
+                        }
+                    } else {
+                        // Handle empty data
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                orderAdapter.updateOrders(new ArrayList<>());
+                                updateUIState(true);
+                                Log.d(TAG, "No orders found");
+                            });
+                        }
+                    }
+                } else {
+                    // Handle API error response
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            updateUIState(true);
+                            String errorMsg = response.body() != null ? response.body().getMessage() : response.message();
+                            showError("Failed to load orders: " + errorMsg);
+                            Log.e(TAG, "API Error: " + response.code() + " - " + errorMsg);
+                        });
+                    }
+                }
             }
-            order1.setTotalAmount(150.00);
-            order1.setStatus("Delivered");
-            order1.setWard("Phường Trúc Bạch");
-            order1.setDistrict("Quận Ba Đình");
-            order1.setCity("Thành phố Hà Nội");
-            order1.setOrderDetails(Arrays.asList(new OrderDetail(), new OrderDetail())); // Dummy details for item count
-            dummyOrders.add(order1);
 
-            // Example Order 2
-            Order order2 = new Order();
-            order2.setOderId(123457);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order2.setOrderDate(LocalDateTime.now().minusDays(5));
+            @Override
+            public void onFailure(Call<ApiResponse<PagedResult<OrderResponse>>> call, Throwable t) {
+                // Handle network error
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        updateUIState(true);
+                        showError("Network error: " + t.getMessage());
+                        Log.e(TAG, "Network Error: ", t);
+                    });
+                }
             }
-            order2.setTotalAmount(75.50);
-            order2.setStatus("Shipped");
-            order2.setWard("Phường Trúc Bạch");
-            order2.setDistrict("Quận Ba Đình");
-            order2.setCity("Thành phố Hà Nội");
-            order2.setOrderDetails(Arrays.asList(new OrderDetail()));
-            dummyOrders.add(order2);
-
-            // Example Order 3
-            Order order3 = new Order();
-            order3.setOderId(123458);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order3.setOrderDate(LocalDateTime.now().minusDays(1));
-            }
-            order3.setTotalAmount(200.00);
-            order3.setStatus("Pending");
-            order3.setWard("Phường Trúc Bạch");
-            order3.setDistrict("Quận Ba Đình");
-            order3.setCity("Thành phố Hà Nội");
-            order3.setOrderDetails(Arrays.asList(new OrderDetail(), new OrderDetail(), new OrderDetail()));
-            dummyOrders.add(order3);
-
-            // Uncomment the next line to test the empty state
-            // dummyOrders.clear();
-
-            orderAdapter.updateOrders(dummyOrders);
-            updateUIState(dummyOrders.isEmpty());
-
-            Log.d(TAG, "Order history loaded. Count: " + dummyOrders.size());
-
-        }, 1000); // Simulate 1 second loading time
+        });
     }
 
     private void showLoadingState() {
@@ -182,5 +200,92 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         fragmentTransaction.replace(R.id.frame_layout, orderDetailFragment); // Use your main fragment container ID
         fragmentTransaction.addToBackStack(null); // Add to back stack to allow return
         fragmentTransaction.commit();
+    }
+
+    private List<Order> convertToOrderList(List<OrderResponse> orderResponses) {
+        if (orderResponses == null || orderResponses.isEmpty()) {
+            return new ArrayList<>(); // Return empty list if no orders
+        }
+        List<Order> orders = new ArrayList<>();
+        
+        for (OrderResponse orderResponse : orderResponses) {
+            Order order = new Order();
+            
+            // Map basic fields
+            order.setOderId(orderResponse.getOrderId());
+            order.setUserId(orderResponse.getUserId() != null ? orderResponse.getUserId() : 0);
+            order.setTotalAmount(orderResponse.getTotalAmount());
+            order.setStatus(orderResponse.getStatus());
+            order.setDistrict(orderResponse.getDistrict());
+            order.setCity(orderResponse.getCity());
+            order.setWard(orderResponse.getWard());
+            order.setStreet(orderResponse.getStreet());
+            order.setRecipientName(orderResponse.getRecipientName());
+            order.setPhone(orderResponse.getPhoneNumber());
+            order.setNote(orderResponse.getNote());
+            order.setDiscountedPrice(orderResponse.getDiscountedPrice());
+            order.setPaymentMethod(orderResponse.getPaymentMethod());
+            order.setVoucherCode(orderResponse.getVoucherCode());
+            order.setVoucherId(orderResponse.getVoucherId() != null ? orderResponse.getVoucherId() : 0);
+            order.setCartKey(orderResponse.getCartKey());
+            
+            // Parse date strings to LocalDateTime
+            try {
+                if (orderResponse.getOrderDate() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Handle different date formats from API
+                    String dateStr = orderResponse.getOrderDate().replace("Z", "");
+                    if (dateStr.contains("+")) {
+                        dateStr = dateStr.substring(0, dateStr.indexOf("+"));
+                    }
+                    order.setOrderDate(LocalDateTime.parse(dateStr));
+                }
+                if (orderResponse.getCreatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    String dateStr = orderResponse.getCreatedAt().replace("Z", "");
+                    if (dateStr.contains("+")) {
+                        dateStr = dateStr.substring(0, dateStr.indexOf("+"));
+                    }
+                    order.setCreatedAt(LocalDateTime.parse(dateStr));
+                }
+                if (orderResponse.getUpdatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    String dateStr = orderResponse.getUpdatedAt().replace("Z", "");
+                    if (dateStr.contains("+")) {
+                        dateStr = dateStr.substring(0, dateStr.indexOf("+"));
+                    }
+                    order.setUpdatedAt(LocalDateTime.parse(dateStr));
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error parsing date: " + e.getMessage());
+                // Set current date as fallback
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    order.setOrderDate(LocalDateTime.now());
+                }
+            }
+            
+            // Convert OrderDetailResponse to OrderDetail for counting items
+            List<OrderDetail> orderDetails = new ArrayList<>();
+            if (orderResponse.getOrderDetails() != null) {
+                for (OrderDetailResponse detailResponse : orderResponse.getOrderDetails()) {
+                    OrderDetail orderDetail = new OrderDetail();
+                    orderDetail.setOrderId(detailResponse.getOrderId());
+                    orderDetail.setBookId(detailResponse.getVariantId()); // Map variantId to bookId
+                    orderDetail.setQuantity(detailResponse.getQuantity());
+                    orderDetail.setUnitPrice(detailResponse.getUnitPrice());
+                    orderDetail.setPricePerUnit(detailResponse.getUnitPrice());
+                    orderDetail.setSubTotal(detailResponse.getSubtotal() != null ? detailResponse.getSubtotal() : 0.0);
+                    orderDetail.setBookName("Book Item"); // Placeholder - will be filled later
+                    orderDetails.add(orderDetail);
+                }
+            }
+            order.setOrderDetails(orderDetails);
+            
+            orders.add(order);
+        }
+        
+        return orders;
+    }
+
+    private void showError(String message) {
+        Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
+        Log.e(TAG, "Error: " + message);
     }
 }
