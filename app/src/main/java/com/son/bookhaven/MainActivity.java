@@ -1,5 +1,6 @@
 package com.son.bookhaven;
 
+import android.util.Log;
 import android.view.MenuItem;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,11 +14,21 @@ import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 
+import com.google.android.material.snackbar.Snackbar;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.CartApiService;
+import com.son.bookhaven.data.dto.response.CartItemResponse;
 import com.son.bookhaven.ui.fragments.HomeFragment;
 import com.son.bookhaven.ui.fragments.ExploreFragment;
 import com.son.bookhaven.ui.fragments.CartFragment;
 import com.son.bookhaven.ui.fragments.ProfileFragment;
 import com.son.bookhaven.ui.fragments.SignUpFragment;
+
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -31,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
     private BadgeDrawable cartBadge;
     private int cartItemCount = 3; // Updated to match your cart layout (3 items)
 
+    private long lastCartFetchTime = 0;
+    private static final long CART_FETCH_COOLDOWN = 2000;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void replaceFragment(Fragment fragment) {
+    public void replaceFragment(Fragment fragment) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.replace(R.id.frame_layout, fragment);
@@ -106,20 +119,68 @@ public class MainActivity extends AppCompatActivity {
             cartBadge.setMaxCharacterCount(3);
         }
     }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Update cart badge when returning to the app
+        updateCartBadge(0); // 0 will trigger API fetch
+    }
+    public void updateCartBadge(int initialCount) {
+        long currentTime = System.currentTimeMillis();
+        if (initialCount > 0 && (currentTime - lastCartFetchTime < CART_FETCH_COOLDOWN)) {
+            updateBadgeVisibility(initialCount);
+            return;
+        }
+        // Use this context instead of requireContext() which is for fragments
+        CartApiService apiService = ApiClient.getAuthenticatedClient(this).create(CartApiService.class);
+        Call<List<CartItemResponse>> call = apiService.getCart();
+        lastCartFetchTime = currentTime;
+        call.enqueue(new Callback<List<CartItemResponse>>() {
+            @Override
+            public void onResponse(Call<List<CartItemResponse>> call, Response<List<CartItemResponse>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<CartItemResponse> cartItems = response.body();
+                    int itemCount = cartItems.size();
+                    Log.d("LoadCartItems", "Loaded " + itemCount + " items from API.");
 
-    public void updateCartBadge(int itemCount) {
-        cartItemCount = itemCount;
+                    // Update the badge with the actual count from the API
+                    if (cartBadge != null) {
+                        if (itemCount > 0) {
+                            cartBadge.setNumber(itemCount);
+                            cartBadge.setVisible(true);
+                        } else {
+                            cartBadge.setVisible(false);
+                        }
+                    }
 
+                    // Update the local count variable
+                    cartItemCount = itemCount;
+                } else {
+                    Log.e("LoadCartItems", "Failed to load cart. Response code: " + response.code());
+                    // Fallback to the provided count
+                    updateBadgeVisibility(initialCount);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<CartItemResponse>> call, Throwable t) {
+                Log.e("LoadCartItems", "Error: " + t.getMessage());
+                // Fallback to the provided count on error
+                updateBadgeVisibility(initialCount);
+            }
+        });
+    }
+    private void updateBadgeVisibility(int count) {
         if (cartBadge != null) {
-            if (itemCount > 0) {
-                cartBadge.setNumber(itemCount);
+            if (count > 0) {
+                cartBadge.setNumber(count);
                 cartBadge.setVisible(true);
             } else {
                 cartBadge.setVisible(false);
             }
         }
+        cartItemCount = count;
     }
-
     // Call this method when items are added to cart
     public void addToCart() {
         cartItemCount++;

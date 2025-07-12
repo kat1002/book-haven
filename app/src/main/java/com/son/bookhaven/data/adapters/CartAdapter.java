@@ -5,6 +5,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
@@ -12,6 +14,7 @@ import com.google.android.material.textview.MaterialTextView;
 import com.son.bookhaven.R;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
 
+import java.text.NumberFormat;
 import java.util.ArrayList; // <--- IMPORT ArrayList
 import java.util.List;
 import java.util.Locale;
@@ -99,13 +102,29 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
         }
 
         public void bind(CartItemResponse item) {
+            NumberFormat format = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
             checkboxItem.setChecked(item.getIsSelected());
             itemName.setText(item.getTitle());
-            itemPrice.setText(String.format(Locale.US, "$%.2f", item.getPrice()));
+            itemPrice.setText(format.format(item.getPrice()));
             tvQuantity.setText(String.valueOf(item.getQuantity()));
-            itemTotalPrice.setText(String.format(Locale.US, "$%.2f", item.getTotalPrice()));
+            itemTotalPrice.setText(format.format(item.getTotalPrice()));
 
-            itemImage.setImageResource(R.drawable.ic_book_placeholder);
+            // Replace this line:
+// itemImage.setImageResource(item.getBookImages().get(0));
+
+// With this:
+            if (item.getBookImages() != null && !item.getBookImages().isEmpty()) {
+                String imageUrl = item.getBookImages().get(0);
+                // Load image from URL using Glide
+                Glide.with(itemView.getContext())
+                        .load(imageUrl)
+                        .placeholder(R.drawable.ic_book_placeholder) // Add a placeholder image resource
+                        .error(R.drawable.ic_book_placeholder)      // Same image for errors
+                        .centerCrop()
+                        .into(itemImage);
+            } else {
+                itemImage.setImageResource(R.drawable.ic_book_placeholder);
+            }     // Placeholder image
 
             // Listeners
             checkboxItem.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -117,14 +136,14 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
             btnDecrement.setOnClickListener(v -> {
                 if (item.getQuantity() > 1) {
                     if (onQuantityChangeListener != null) {
-                        onQuantityChangeListener.onQuantityChange(item, item.getQuantity() - 1);
+                        onQuantityChangeListener.onQuantityChange(item, - 1);
                     }
                 }
             });
 
             btnIncrement.setOnClickListener(v -> {
                 if (onQuantityChangeListener != null) {
-                    onQuantityChangeListener.onQuantityChange(item, item.getQuantity() + 1);
+                    onQuantityChangeListener.onQuantityChange(item,  + 1);
                 }
             });
         }
