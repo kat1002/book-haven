@@ -46,6 +46,9 @@ public class OrderResponse {
     @SerializedName("note")
     public String note;
     
+    @SerializedName("feedBack")
+    public String feedBack;
+    
     @SerializedName("paymentOrderCode")
     public Long paymentOrderCode;
     
@@ -53,7 +56,7 @@ public class OrderResponse {
     public double discountedPrice;
     
     @SerializedName("paymentMethod")
-    public byte paymentMethod;
+    public int paymentMethod;
     
     @SerializedName("voucherCode")
     public String voucherCode;
@@ -63,6 +66,9 @@ public class OrderResponse {
     
     @SerializedName("updatedAt")
     public String updatedAt;
+    
+    @SerializedName("email")
+    public String email;
     
     @SerializedName("voucherId")
     public Integer voucherId;

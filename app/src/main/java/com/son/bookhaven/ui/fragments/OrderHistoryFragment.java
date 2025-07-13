@@ -22,15 +22,13 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.OrderService;
+import com.son.bookhaven.authService.TokenManager;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.PagedResult;
 import com.son.bookhaven.data.dto.OrderResponse;
 import com.son.bookhaven.data.dto.OrderDetailResponse;
 import com.son.bookhaven.data.adapters.OrderAdapter;
-import com.son.bookhaven.data.model.Order;
-import com.son.bookhaven.data.model.OrderDetail;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import retrofit2.Call;
@@ -47,8 +45,9 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
     private ProgressBar progressBar;
 
     private OrderAdapter orderAdapter;
-    private List<Order> orderList;
+    private List<OrderResponse> orderList;
     private OrderService orderService;
+    private TokenManager tokenManager;
 
     public OrderHistoryFragment() {
         // Required empty public constructor
@@ -72,6 +71,9 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         rvOrderHistory = view.findViewById(R.id.rv_order_history);
         layoutEmptyState = view.findViewById(R.id.layout_empty_state);
         progressBar = view.findViewById(R.id.progress_bar);
+        
+        // Initialize TokenManager
+        tokenManager = new TokenManager(requireContext());
     }
 
     private void setupToolbar() {
@@ -93,14 +95,21 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         rvOrderHistory.setAdapter(orderAdapter);
         
         // Initialize API service
-        orderService = ApiClient.getClient().create(OrderService.class);
+        orderService = ApiClient.getAuthenticatedClient(requireContext()).create(OrderService.class);
     }
 
     private void loadOrderHistory() {
         showLoadingState();
 
-        // Mock userId = 3 for testing
-        int userId = 3;
+        // Get userId from TokenManager
+        int userId = tokenManager.getUserId();
+        if (userId == -1) {
+            // User not logged in or userId not available
+            showError("User not logged in");
+            updateUIState(true);
+            return;
+        }
+        
         int page = 1;
         int pageSize = 10;
 
@@ -117,15 +126,12 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
                         List<OrderResponse> orderResponses = pagedResult.getItems();
                         Log.d(TAG, "OrderResponses: " + orderResponses.size() + " items");
 
-                        // Convert API response to UI models
-                        List<Order> orders = convertToOrderList(orderResponses);
-                        
-                        // Update UI on main thread
+                        // Update UI on main thread with OrderResponse objects
                         if (getActivity() != null) {
                             getActivity().runOnUiThread(() -> {
-                                orderAdapter.updateOrders(orders);
-                                updateUIState(orders.isEmpty());
-                                Log.d(TAG, "Order history loaded from API. Count: " + orders.size());
+                                orderAdapter.updateOrders(orderResponses);
+                                updateUIState(orderResponses.isEmpty());
+                                Log.d(TAG, "Order history loaded from API. Count: " + orderResponses.size());
                             });
                         }
                     } else {
@@ -184,10 +190,10 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
 
     // --- OrderAdapter.OnOrderClickListener Implementation ---
     @Override
-    public void onOrderClick(Order order) {
-        Toast.makeText(getContext(), "Clicked Order ID: " + order.getOderId(), Toast.LENGTH_SHORT).show();
+    public void onOrderClick(OrderResponse order) {
+        Toast.makeText(getContext(), "Clicked Order ID: " + order.getOrderId(), Toast.LENGTH_SHORT).show();
         // Navigate to OrderDetailFragment, passing the order ID or the entire order object
-        navigateToOrderDetail(order.getOderId());
+        navigateToOrderDetail(order.getOrderId());
     }
 
     private void navigateToOrderDetail(int orderId) {
@@ -202,87 +208,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         fragmentTransaction.commit();
     }
 
-    private List<Order> convertToOrderList(List<OrderResponse> orderResponses) {
-        if (orderResponses == null || orderResponses.isEmpty()) {
-            return new ArrayList<>(); // Return empty list if no orders
-        }
-        List<Order> orders = new ArrayList<>();
-        
-        for (OrderResponse orderResponse : orderResponses) {
-            Order order = new Order();
-            
-            // Map basic fields
-            order.setOderId(orderResponse.getOrderId());
-            order.setUserId(orderResponse.getUserId() != null ? orderResponse.getUserId() : 0);
-            order.setTotalAmount(orderResponse.getTotalAmount());
-            order.setStatus(orderResponse.getStatus());
-            order.setDistrict(orderResponse.getDistrict());
-            order.setCity(orderResponse.getCity());
-            order.setWard(orderResponse.getWard());
-            order.setStreet(orderResponse.getStreet());
-            order.setRecipientName(orderResponse.getRecipientName());
-            order.setPhone(orderResponse.getPhoneNumber());
-            order.setNote(orderResponse.getNote());
-            order.setDiscountedPrice(orderResponse.getDiscountedPrice());
-            order.setPaymentMethod(orderResponse.getPaymentMethod());
-            order.setVoucherCode(orderResponse.getVoucherCode());
-            order.setVoucherId(orderResponse.getVoucherId() != null ? orderResponse.getVoucherId() : 0);
-            order.setCartKey(orderResponse.getCartKey());
-            
-            // Parse date strings to LocalDateTime
-            try {
-                if (orderResponse.getOrderDate() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    // Handle different date formats from API
-                    String dateStr = orderResponse.getOrderDate().replace("Z", "");
-                    if (dateStr.contains("+")) {
-                        dateStr = dateStr.substring(0, dateStr.indexOf("+"));
-                    }
-                    order.setOrderDate(LocalDateTime.parse(dateStr));
-                }
-                if (orderResponse.getCreatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    String dateStr = orderResponse.getCreatedAt().replace("Z", "");
-                    if (dateStr.contains("+")) {
-                        dateStr = dateStr.substring(0, dateStr.indexOf("+"));
-                    }
-                    order.setCreatedAt(LocalDateTime.parse(dateStr));
-                }
-                if (orderResponse.getUpdatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    String dateStr = orderResponse.getUpdatedAt().replace("Z", "");
-                    if (dateStr.contains("+")) {
-                        dateStr = dateStr.substring(0, dateStr.indexOf("+"));
-                    }
-                    order.setUpdatedAt(LocalDateTime.parse(dateStr));
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Error parsing date: " + e.getMessage());
-                // Set current date as fallback
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    order.setOrderDate(LocalDateTime.now());
-                }
-            }
-            
-            // Convert OrderDetailResponse to OrderDetail for counting items
-            List<OrderDetail> orderDetails = new ArrayList<>();
-            if (orderResponse.getOrderDetails() != null) {
-                for (OrderDetailResponse detailResponse : orderResponse.getOrderDetails()) {
-                    OrderDetail orderDetail = new OrderDetail();
-                    orderDetail.setOrderId(detailResponse.getOrderId());
-                    orderDetail.setBookId(detailResponse.getVariantId()); // Map variantId to bookId
-                    orderDetail.setQuantity(detailResponse.getQuantity());
-                    orderDetail.setUnitPrice(detailResponse.getUnitPrice());
-                    orderDetail.setPricePerUnit(detailResponse.getUnitPrice());
-                    orderDetail.setSubTotal(detailResponse.getSubtotal() != null ? detailResponse.getSubtotal() : 0.0);
-                    orderDetail.setBookName("Book Item"); // Placeholder - will be filled later
-                    orderDetails.add(orderDetail);
-                }
-            }
-            order.setOrderDetails(orderDetails);
-            
-            orders.add(order);
-        }
-        
-        return orders;
-    }
+
 
     private void showError(String message) {
         Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();

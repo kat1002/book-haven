@@ -23,5 +23,17 @@ public class OrderDetailResponse {
     public double unitPrice;
     
     @SerializedName("subtotal")
-    public Double subtotal;
+    public double subtotal;
+    
+    @SerializedName("url")
+    public String url;
+    
+    @SerializedName("title")
+    public String title;
+    
+    @SerializedName("publicationYear")
+    public int publicationYear;
+    
+    @SerializedName("language")
+    public int language;
 } 

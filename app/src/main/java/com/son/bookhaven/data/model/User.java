@@ -1,7 +1,6 @@
 package com.son.bookhaven.data.model;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class User implements Serializable {
@@ -10,7 +9,7 @@ public class User implements Serializable {
     private String email;
     private String phone;
     private int roleId;
-    private LocalDateTime createdAt;
+    private String createdAt;
     private String passwordHash;
     private boolean emailVerified;
     private String profileImageUrl;
@@ -68,11 +67,11 @@ public class User implements Serializable {
         this.roleId = roleId;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public String getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 

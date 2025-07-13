@@ -70,4 +70,5 @@ dependencies {
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     implementation ("com.github.bumptech.glide:glide:4.16.0")
+    implementation ("com.github.Pranathi-pellakuru:LetterAvatarGenerator:1.1")
 }
