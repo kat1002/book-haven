@@ -18,6 +18,8 @@ public class CheckOutRequest {
     private List<Integer> cartItemIds = new ArrayList<>();
     private String email = "";
 
+    private byte deviceCheckOut = 1;
+
     // Getters and setters
     public String getRecipientName() {
         return recipientName;
