@@ -13,23 +13,23 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.son.bookhaven.R;
-import com.son.bookhaven.data.model.Order;
+import com.son.bookhaven.data.dto.OrderResponse;
 
-import java.time.format.DateTimeFormatter;
+
 import java.util.List;
 import java.util.Locale;
 
 public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHolder> {
 
-    private List<Order> orderList;
+    private List<OrderResponse> orderList;
     private OnOrderClickListener listener;
     private Context context; // Needed for getColor
 
     public interface OnOrderClickListener {
-        void onOrderClick(Order order);
+        void onOrderClick(OrderResponse order);
     }
 
-    public OrderAdapter(Context context, List<Order> orderList, OnOrderClickListener listener) {
+    public OrderAdapter(Context context, List<OrderResponse> orderList, OnOrderClickListener listener) {
         this.context = context;
         this.orderList = orderList;
         this.listener = listener;
@@ -45,29 +45,32 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
 
     @Override
     public void onBindViewHolder(@NonNull OrderViewHolder holder, int position) {
-        Order order = orderList.get(position);
+        OrderResponse order = orderList.get(position);
 
-        holder.tvOrderId.setText("Order #" + order.getOderId());
-        // Format LocalDateTime to a readable date string
+        holder.tvOrderId.setText("Order #" + order.getOrderId());
+        // Format date string (already a string from API)
         if (order.getOrderDate() != null) {
-            DateTimeFormatter formatter = null;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.getDefault());
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                holder.tvOrderDate.setText(order.getOrderDate().format(formatter));
+            // Parse the date string and format it nicely
+            try {
+                String dateStr = order.getOrderDate();
+                // Remove the time part if it exists and show just the date
+                if (dateStr.contains("T")) {
+                    dateStr = dateStr.substring(0, dateStr.indexOf("T"));
+                }
+                holder.tvOrderDate.setText(dateStr);
+            } catch (Exception e) {
+                holder.tvOrderDate.setText("N/A");
             }
         } else {
             holder.tvOrderDate.setText("N/A");
         }
 
-        // Assuming you have a way to get total items (e.g., from order.orderDetails.size())
+        // Get total items from order details
         if (order.getOrderDetails() != null) {
             holder.tvTotalItems.setText(order.getOrderDetails().size() + " items");
         } else {
             holder.tvTotalItems.setText("0 items"); // Or hide this view
         }
-
 
         // Display total amount (consider formatting for currency)
         holder.tvTotalAmount.setText(String.format(Locale.getDefault(), "$%.2f", order.getTotalAmount()));
@@ -77,13 +80,9 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         setOrderStatusBackground(holder.tvOrderStatus, order.getStatus());
 
         // Delivery Address Summary
-        if (order.getDeliveryAddress() != null) {
-            holder.tvDeliveryAddressSummary.setText("Delivered to: " + order.getDeliveryAddress());
-            holder.tvDeliveryAddressSummary.setVisibility(View.VISIBLE);
-        } else {
-            holder.tvDeliveryAddressSummary.setVisibility(View.GONE);
-        }
-
+        String deliveryAddress = order.getStreet() + ", " + order.getWard() + ", " + order.getDistrict() + ", " + order.getCity();
+        holder.tvDeliveryAddressSummary.setText("Delivered to: " + deliveryAddress);
+        holder.tvDeliveryAddressSummary.setVisibility(View.VISIBLE);
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
@@ -97,7 +96,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         return orderList.size();
     }
 
-    public void updateOrders(List<Order> newOrders) {
+    public void updateOrders(List<OrderResponse> newOrders) {
         this.orderList.clear();
         this.orderList.addAll(newOrders);
         notifyDataSetChanged();

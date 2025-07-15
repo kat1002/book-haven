@@ -2,8 +2,6 @@ package com.son.bookhaven.ui.fragments; // Adjust your package name
 
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,14 +20,20 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.OrderService;
+import com.son.bookhaven.authService.TokenManager;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.PagedResult;
+import com.son.bookhaven.data.dto.OrderResponse;
+import com.son.bookhaven.data.dto.OrderDetailResponse;
 import com.son.bookhaven.data.adapters.OrderAdapter;
-import com.son.bookhaven.data.model.Order;
-import com.son.bookhaven.data.model.OrderDetail;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrderClickListener {
 
@@ -41,7 +45,9 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
     private ProgressBar progressBar;
 
     private OrderAdapter orderAdapter;
-    private List<Order> orderList;
+    private List<OrderResponse> orderList;
+    private OrderService orderService;
+    private TokenManager tokenManager;
 
     public OrderHistoryFragment() {
         // Required empty public constructor
@@ -65,6 +71,9 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         rvOrderHistory = view.findViewById(R.id.rv_order_history);
         layoutEmptyState = view.findViewById(R.id.layout_empty_state);
         progressBar = view.findViewById(R.id.progress_bar);
+        
+        // Initialize TokenManager
+        tokenManager = new TokenManager(requireContext());
     }
 
     private void setupToolbar() {
@@ -84,67 +93,82 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         orderAdapter = new OrderAdapter(getContext(), orderList, this); // 'this' implements OnOrderClickListener
         rvOrderHistory.setLayoutManager(new LinearLayoutManager(getContext()));
         rvOrderHistory.setAdapter(orderAdapter);
+        
+        // Initialize API service
+        orderService = ApiClient.getAuthenticatedClient(requireContext()).create(OrderService.class);
     }
 
     private void loadOrderHistory() {
         showLoadingState();
 
-        // Simulate a network/database call
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            // --- Dummy Data for Demonstration ---
-            List<Order> dummyOrders = new ArrayList<>();
+        // Get userId from TokenManager
+        int userId = tokenManager.getUserId();
+        if (userId == -1) {
+            // User not logged in or userId not available
+            showError("User not logged in");
+            updateUIState(true);
+            return;
+        }
+        
+        int page = 1;
+        int pageSize = 10;
 
-            // Example Order 1
-            Order order1 = new Order();
-            order1.setOderId(123456);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order1.setOrderDate(LocalDateTime.now().minusDays(10));
+        Call<ApiResponse<PagedResult<OrderResponse>>> call = orderService.getUserOrders(userId, page, pageSize);
+        call.enqueue(new Callback<ApiResponse<PagedResult<OrderResponse>>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<PagedResult<OrderResponse>>> call, Response<ApiResponse<PagedResult<OrderResponse>>> response) {
+                Log.d(TAG, "Response body: " + response.body());
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    ApiResponse<PagedResult<OrderResponse>> apiResponse = response.body();
+                    PagedResult<OrderResponse> pagedResult = apiResponse.getData();
+                    
+                    if (pagedResult != null && pagedResult.getItems() != null) {
+                        List<OrderResponse> orderResponses = pagedResult.getItems();
+                        Log.d(TAG, "OrderResponses: " + orderResponses.size() + " items");
+
+                        // Update UI on main thread with OrderResponse objects
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                orderAdapter.updateOrders(orderResponses);
+                                updateUIState(orderResponses.isEmpty());
+                                Log.d(TAG, "Order history loaded from API. Count: " + orderResponses.size());
+                            });
+                        }
+                    } else {
+                        // Handle empty data
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                orderAdapter.updateOrders(new ArrayList<>());
+                                updateUIState(true);
+                                Log.d(TAG, "No orders found");
+                            });
+                        }
+                    }
+                } else {
+                    // Handle API error response
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(() -> {
+                            updateUIState(true);
+                            String errorMsg = response.body() != null ? response.body().getMessage() : response.message();
+                            showError("Failed to load orders: " + errorMsg);
+                            Log.e(TAG, "API Error: " + response.code() + " - " + errorMsg);
+                        });
+                    }
+                }
             }
-            order1.setTotalAmount(150.00);
-            order1.setStatus("Delivered");
-            order1.setWard("Phường Trúc Bạch");
-            order1.setDistrict("Quận Ba Đình");
-            order1.setCity("Thành phố Hà Nội");
-            order1.setOrderDetails(Arrays.asList(new OrderDetail(), new OrderDetail())); // Dummy details for item count
-            dummyOrders.add(order1);
 
-            // Example Order 2
-            Order order2 = new Order();
-            order2.setOderId(123457);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order2.setOrderDate(LocalDateTime.now().minusDays(5));
+            @Override
+            public void onFailure(Call<ApiResponse<PagedResult<OrderResponse>>> call, Throwable t) {
+                // Handle network error
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        updateUIState(true);
+                        showError("Network error: " + t.getMessage());
+                        Log.e(TAG, "Network Error: ", t);
+                    });
+                }
             }
-            order2.setTotalAmount(75.50);
-            order2.setStatus("Shipped");
-            order2.setWard("Phường Trúc Bạch");
-            order2.setDistrict("Quận Ba Đình");
-            order2.setCity("Thành phố Hà Nội");
-            order2.setOrderDetails(Arrays.asList(new OrderDetail()));
-            dummyOrders.add(order2);
-
-            // Example Order 3
-            Order order3 = new Order();
-            order3.setOderId(123458);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order3.setOrderDate(LocalDateTime.now().minusDays(1));
-            }
-            order3.setTotalAmount(200.00);
-            order3.setStatus("Pending");
-            order3.setWard("Phường Trúc Bạch");
-            order3.setDistrict("Quận Ba Đình");
-            order3.setCity("Thành phố Hà Nội");
-            order3.setOrderDetails(Arrays.asList(new OrderDetail(), new OrderDetail(), new OrderDetail()));
-            dummyOrders.add(order3);
-
-            // Uncomment the next line to test the empty state
-            // dummyOrders.clear();
-
-            orderAdapter.updateOrders(dummyOrders);
-            updateUIState(dummyOrders.isEmpty());
-
-            Log.d(TAG, "Order history loaded. Count: " + dummyOrders.size());
-
-        }, 1000); // Simulate 1 second loading time
+        });
     }
 
     private void showLoadingState() {
@@ -166,10 +190,10 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
 
     // --- OrderAdapter.OnOrderClickListener Implementation ---
     @Override
-    public void onOrderClick(Order order) {
-        Toast.makeText(getContext(), "Clicked Order ID: " + order.getOderId(), Toast.LENGTH_SHORT).show();
+    public void onOrderClick(OrderResponse order) {
+        Toast.makeText(getContext(), "Clicked Order ID: " + order.getOrderId(), Toast.LENGTH_SHORT).show();
         // Navigate to OrderDetailFragment, passing the order ID or the entire order object
-        navigateToOrderDetail(order.getOderId());
+        navigateToOrderDetail(order.getOrderId());
     }
 
     private void navigateToOrderDetail(int orderId) {
@@ -182,5 +206,12 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         fragmentTransaction.replace(R.id.frame_layout, orderDetailFragment); // Use your main fragment container ID
         fragmentTransaction.addToBackStack(null); // Add to back stack to allow return
         fragmentTransaction.commit();
+    }
+
+
+
+    private void showError(String message) {
+        Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
+        Log.e(TAG, "Error: " + message);
     }
 }

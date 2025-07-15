@@ -22,6 +22,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.gson.Gson;
 import com.son.bookhaven.R;
+import com.pranathicodes.letteravatar.AvatarCreator;
 import com.son.bookhaven.apiHelper.AccountApiService;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.AuthApiService;
@@ -114,7 +115,7 @@ public class ProfileFragment extends Fragment {
 
     private void initApiService() {
         authApiService = ApiClient.getClient().create(AuthApiService.class);
-        accountApiService = ApiClient.getClient().create(AccountApiService.class);
+        accountApiService = ApiClient.getAuthenticatedClient(requireContext()).create(AccountApiService.class);
     }
 
     private void setupToolbar() {
@@ -141,7 +142,7 @@ public class ProfileFragment extends Fragment {
             return;
         }
 
-        Call<User> call = accountApiService.getMyInfo("Bearer " + token);
+        Call<User> call = accountApiService.getMyInfo();
 
         call.enqueue(new Callback<User>() {
             @Override
@@ -150,6 +151,8 @@ public class ProfileFragment extends Fragment {
 
                 if (response.isSuccessful() && response.body() != null) {
                     currentUser = response.body();
+                    // Update TokenManager with fresh user data
+                    tokenManager.updateUserData(currentUser);
                     showLoggedInState();
                     Log.d(TAG, "User info fetched successfully");
                 } else if (response.code() == 401) {
@@ -231,10 +234,10 @@ public class ProfileFragment extends Fragment {
         if (currentUser != null) {
             profileName.setText(currentUser.getFullName());
             profileEmail.setText(currentUser.getEmail());
+            
+            // Generate avatar with user's name
+            generateAvatar(currentUser.getFullName());
         }
-
-        // Skip image loading as requested
-        profileImage.setImageResource(R.drawable.ic_default_avatar);
 
         // Enable logged-in specific options
         enableLoggedInFeatures(true);
@@ -246,11 +249,12 @@ public class ProfileFragment extends Fragment {
         layoutAuthButtons.setVisibility(View.GONE);
 
         // Use cached data from TokenManager
-        profileName.setText(tokenManager.getFullName());
+        String fullName = tokenManager.getFullName();
+        profileName.setText(fullName);
         profileEmail.setText(""); // Email not stored in cache
 
-        // Skip image loading as requested
-        profileImage.setImageResource(R.drawable.ic_default_avatar);
+        // Generate avatar with cached user's name
+        generateAvatar(fullName);
 
         // Enable logged-in specific options
         enableLoggedInFeatures(true);
@@ -265,6 +269,31 @@ public class ProfileFragment extends Fragment {
         enableLoggedInFeatures(false);
 
         Log.d(TAG, "User not logged in. Showing auth buttons.");
+    }
+
+    private void generateAvatar(String fullName) {
+        if (fullName == null || fullName.isEmpty()) {
+            // Fallback to default avatar if no name is available
+            profileImage.setImageResource(R.drawable.ic_default_avatar);
+            return;
+        }
+
+        try {
+            // Extract first letter of the name
+            char firstLetter = fullName.charAt(0);
+            
+            // Create avatar with the first letter
+            AvatarCreator avatarCreator = new AvatarCreator(requireContext());
+            profileImage.setImageBitmap(avatarCreator
+                    .setLetter(firstLetter)
+                    .setTextSize(40)
+                    .setAvatarSize(200)
+                    .build());
+        } catch (Exception e) {
+            Log.e(TAG, "Error generating avatar", e);
+            // Fallback to default avatar on error
+            profileImage.setImageResource(R.drawable.ic_default_avatar);
+        }
     }
 
     private void enableLoggedInFeatures(boolean enabled) {

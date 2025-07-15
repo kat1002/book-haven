@@ -68,4 +68,12 @@ public class TokenManager {
     public String getRole() {
         return sharedPreferences.getString(KEY_ROLE, "");
     }
+
+    // Method to update user data from fetched User object
+    public void updateUserData(com.son.bookhaven.data.model.User user) {
+        sharedPreferences.edit()
+                .putInt(KEY_USER_ID, user.getUserId())
+                .putString(KEY_FULL_NAME, user.getFullName())
+                .apply();
+    }
 }
