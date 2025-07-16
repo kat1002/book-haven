@@ -3,10 +3,7 @@ package com.son.bookhaven.ui.fragments; // Adjust package as necessary
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,9 +15,6 @@ import android.widget.RadioGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -38,27 +32,21 @@ import com.son.bookhaven.apiHelper.AddressApiService;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.CheckOutService;
 import com.son.bookhaven.data.adapters.CartItemAdapter; // Assuming this is your adapter package
+import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.request.CheckOutRequest;
-import com.son.bookhaven.data.dto.response.ApiResponse;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
+import com.son.bookhaven.data.dto.response.CheckOutResponse;
 import com.son.bookhaven.data.dto.response.DistrictResponse;
-import com.son.bookhaven.data.dto.response.PaymentResponse;
 import com.son.bookhaven.data.dto.response.ProvinceResponse;
 import com.son.bookhaven.data.dto.response.WardResponse;
-import com.son.bookhaven.data.model.Author;
-import com.son.bookhaven.data.model.Book;
-import com.son.bookhaven.data.model.BookImage; // Ensure this is imported if used
-import com.son.bookhaven.data.model.CartItem;
-import com.son.bookhaven.data.model.LanguageCode;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
-import java.time.LocalDateTime;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -471,9 +459,9 @@ public class CheckoutFragment extends Fragment {
 
         // Make API call to place order
         checkOutService.placeOrder(checkoutRequest)
-                .enqueue(new Callback<ApiResponse<String>>() {
+                .enqueue(new Callback<ApiResponse<CheckOutResponse>>() {
                     @Override
-                    public void onResponse(Call<ApiResponse<String>> call, Response<ApiResponse<String>> response) {
+                    public void onResponse(Call<ApiResponse<CheckOutResponse>> call, Response<ApiResponse<CheckOutResponse>> response) {
                         // Hide loading indicator
                         if (loadingOverlay != null) {
                             loadingOverlay.setVisibility(View.GONE);
@@ -482,26 +470,61 @@ public class CheckoutFragment extends Fragment {
                         Log.d("checkout", "Response code: " + response.code());
 
                         if (response.isSuccessful() && response.body() != null) {
-                            ApiResponse<String> apiResponse = response.body();
+                            ApiResponse<CheckOutResponse> apiResponse = response.body();
 
                             Log.d("checkout", "Success: " + apiResponse.isSuccess());
                             Log.d("checkout", "Message: " + apiResponse.getMessage());
 
                             if (apiResponse.isSuccess() && apiResponse.getData() != null) {
+                                // Check if payment method is COD (value 1)
+                                if (paymentMethod == 1) {
+                                    // Create and navigate to OrderConfirmationFragment directly for COD
+                                    OrderConfirmationFragment confirmationFragment = new OrderConfirmationFragment();
 
-                                String paymentUrl = apiResponse.getData();
+                                    // Pass all necessary data to the fragment
+                                    Bundle args = new Bundle();
+                                    args.putInt("order_id", apiResponse.getData().getOrderId());
+                                    args.putInt("payment_method", OrderConfirmationFragment.PAYMENT_COD);
+                                    args.putBoolean("is_payment_completed", true); // For COD, mark as completed
+                                    args.putString("order_date", new SimpleDateFormat("dd/MM/yyyy", new Locale("vi", "VN")).format(new Date()));
 
-                                Log.d("checkout", "Payment URL: " + paymentUrl);
+                                    // Add address info
+                                    args.putString("recipient_name", recipientName);
+                                    args.putString("phone_number", phoneNumber);
+                                    args.putString("city", city);
+                                    args.putString("district", district);
+                                    args.putString("ward", ward);
+                                    args.putString("street", street);
 
-                                if (paymentUrl != null && !paymentUrl.isEmpty()) {
-                                    // Save payment in progress flag
-                                    saveOrderInProgress();
+                                    // Calculate total amount
+                                    BigDecimal subtotal = BigDecimal.ZERO;
+                                    for (CartItemResponse item : cartItems) {
+                                        subtotal = subtotal.add(item.getTotalPrice());
+                                    }
+                                    BigDecimal total = subtotal.add(SHIPPING_COST);
+                                    args.putDouble("total_amount", total.doubleValue());
 
-                                    // Open payment in WebView
-                                    openPaymentWebView(paymentUrl);
+                                    confirmationFragment.setArguments(args);
+
+                                    // Replace fragment
+                                    if (getActivity() instanceof MainActivity) {
+                                        ((MainActivity) getActivity()).replaceFragment(confirmationFragment);
+                                    }
                                 } else {
-                                    Snackbar.make(requireView(),
-                                            "Payment URL not found", Snackbar.LENGTH_LONG).show();
+                                    // For online payment (PayOS), proceed with WebView
+                                    String paymentUrl = apiResponse.getData().getRedirectURl();
+                                    Log.d("checkout", "Payment URL: " + paymentUrl);
+
+                                    if (paymentUrl != null && !paymentUrl.isEmpty()) {
+                                        // Save payment in progress flag
+                                        saveOrderInProgress();
+
+                                        // Open payment in WebView
+                                        openPaymentWebView(paymentUrl);
+                                    } else {
+                                        Snackbar.make(requireView(),
+                                                "Payment URL not found", Snackbar.LENGTH_LONG).show();
+                                    }
                                 }
                             } else {
                                 Snackbar.make(requireView(),
@@ -526,7 +549,7 @@ public class CheckoutFragment extends Fragment {
                     }
 
                     @Override
-                    public void onFailure(Call<ApiResponse<String>> call, Throwable t) {
+                    public void onFailure(Call<ApiResponse<CheckOutResponse>> call, Throwable t) {
                         // Hide loading indicator
                         if (loadingOverlay != null) {
                             loadingOverlay.setVisibility(View.GONE);

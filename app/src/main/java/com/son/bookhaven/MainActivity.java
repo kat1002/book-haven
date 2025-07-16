@@ -26,11 +26,15 @@ import com.son.bookhaven.data.dto.response.CartItemResponse;
 import com.son.bookhaven.ui.fragments.HomeFragment;
 import com.son.bookhaven.ui.fragments.ExploreFragment;
 import com.son.bookhaven.ui.fragments.CartFragment;
+import com.son.bookhaven.ui.fragments.OrderConfirmationFragment;
 import com.son.bookhaven.ui.fragments.OrderHistoryFragment;
 import com.son.bookhaven.ui.fragments.ProfileFragment;
 import com.son.bookhaven.ui.fragments.SignUpFragment;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -129,7 +133,41 @@ public class MainActivity extends AppCompatActivity {
                     paymentSuccess ? "Payment completed successfully" : "Payment was not completed",
                     Snackbar.LENGTH_LONG).show();
         }
+        if (hasPaymentCompleted) {
+            boolean paymentSuccess = getIntent().getBooleanExtra("payment_success", false);
+            Log.d("MainActivity", "Payment success: " + paymentSuccess);
 
+            // Clear cart
+            clearCart();
+
+            // Navigate to OrderConfirmationFragment instead of OrderHistoryFragment
+            OrderConfirmationFragment confirmationFragment = new OrderConfirmationFragment();
+
+            // Pass all payment data to the fragment
+            Bundle args = new Bundle();
+            args.putInt("order_id", getIntent().getIntExtra("order_id", 0));
+            args.putString("payment_code", getIntent().getStringExtra("payment_code"));
+            args.putInt("payment_method", getIntent().getIntExtra("payment_method", OrderConfirmationFragment.PAYMENT_PAYOS));
+            args.putBoolean("is_payment_completed", paymentSuccess);
+            args.putString("order_date", new SimpleDateFormat("dd/MM/yyyy", new Locale("vi", "VN")).format(new Date()));
+            args.putDouble("total_amount", getIntent().getDoubleExtra("total_amount", 0.0));
+
+            // Add any address info if available
+            args.putString("recipient_name", getIntent().getStringExtra("recipient_name"));
+            args.putString("phone_number", getIntent().getStringExtra("phone_number"));
+            args.putString("city", getIntent().getStringExtra("city"));
+            args.putString("district", getIntent().getStringExtra("district"));
+            args.putString("ward", getIntent().getStringExtra("ward"));
+            args.putString("street", getIntent().getStringExtra("street"));
+
+            confirmationFragment.setArguments(args);
+
+            replaceFragment(confirmationFragment);
+
+            // Set the correct tab selected in bottom navigation
+            //bottomNavigationView.setSelectedItemId(R.id.nav_profile);
+            updateToolbarTitle("Order Confirmation");
+        }
     }
 
     public void replaceFragment(Fragment fragment) {
