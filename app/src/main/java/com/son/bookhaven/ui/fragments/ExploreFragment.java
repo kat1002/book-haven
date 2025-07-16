@@ -190,7 +190,7 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
             BookVariant variant = new BookVariant();
             variant.setVariantId(response.getVariantId());
             variant.setBookId(response.getBookId());
-            variant.setTitle(response.getVariantTitle());
+            variant.setTitle(response.getTitle());
             variant.setDescription(response.getDescription());
             variant.setIsbn(response.getIsbn());
             variant.setPrice(response.getPrice());

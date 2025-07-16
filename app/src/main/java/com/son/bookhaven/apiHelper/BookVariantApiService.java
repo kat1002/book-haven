@@ -30,6 +30,9 @@ public interface BookVariantApiService {
             @Query("language") String language
     );
 
-    @GET("variants/book/{bookId}")
+    @GET("api/BookVariant/byBookId/{bookId}")
     Call<ApiResponse<List<BookVariantResponse>>> getVariantsByBookId(@Path("bookId") String bookId);
+
+    @GET("api/BookVariant/byCategoryId/{categoryId}")
+    Call<ApiResponse<List<BookVariantResponse>>> getVariantsByCategoryId(@Path("categoryId") int categoryId);
 }

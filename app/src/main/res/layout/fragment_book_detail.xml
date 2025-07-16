@@ -97,7 +97,7 @@
                 android:textColor="?attr/colorPrimary"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                tools:text="$19.99" />
+                tools:text="19.99 VND" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:layout_width="match_parent"

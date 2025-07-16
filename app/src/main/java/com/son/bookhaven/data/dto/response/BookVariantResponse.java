@@ -3,7 +3,6 @@ package com.son.bookhaven.data.dto.response;
 import com.son.bookhaven.data.model.Author;
 import com.son.bookhaven.data.model.BookImage;
 import com.son.bookhaven.data.model.Category;
-import com.son.bookhaven.data.model.LanguageCode;
 import com.son.bookhaven.data.model.Publisher;
 
 import java.math.BigDecimal;
@@ -24,7 +23,7 @@ public class BookVariantResponse {
     private int publicationYear;
     private int categoryId;
     private int publisherId;
-    private String variantTitle;
+    private String title;
     private BigDecimal price;
     private int stockQuantity;
     private String format;

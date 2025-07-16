@@ -13,6 +13,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.imageview.ShapeableImageView;
@@ -209,7 +210,7 @@ public class BookDetailFragment extends Fragment {
 
         // Set price
         if (selectedVariant.getPrice() != null) {
-            tvBookPrice.setText(String.format(Locale.getDefault(), "$%.2f", selectedVariant.getPrice()));
+            tvBookPrice.setText(String.format(Locale.getDefault(), "%.0f VND", selectedVariant.getPrice()));
         } else {
             tvBookPrice.setText(R.string.price_not_available);
         }
@@ -246,8 +247,13 @@ public class BookDetailFragment extends Fragment {
         // Set book cover image
         if (selectedVariant.getBookImages() != null && !selectedVariant.getBookImages().isEmpty()) {
             BookImage coverImage = selectedVariant.getBookImages().get(0);
-            // TODO: Use an image loading library like Glide or Picasso to load the image
-            // Example: Glide.with(this).load(coverImage.getImageUrl()).into(ivBookCover);
+            // Load image with Glide
+            Glide.with(requireContext())
+                    .load(coverImage.getImageUrl())
+                    .placeholder(R.drawable.ic_book_placeholder)
+                    .error(R.drawable.ic_book_placeholder)
+                    .centerCrop()
+                    .into(ivBookCover);
         } else {
             // Set placeholder image
             ivBookCover.setImageResource(R.drawable.ic_book_placeholder);
@@ -304,6 +310,7 @@ public class BookDetailFragment extends Fragment {
                     List<BookVariantResponse> variantResponses = response.body().getData();
 
                     if (variantResponses != null && !variantResponses.isEmpty()) {
+                        Log.d(TAG, "First variant data: " + variantResponses.get(0).toString());
                         // Convert responses to model objects
                         bookVariants = convertToBookVariants(variantResponses);
 
@@ -341,7 +348,7 @@ public class BookDetailFragment extends Fragment {
             BookVariant variant = new BookVariant();
             variant.setVariantId(response.getVariantId());
             variant.setBookId(response.getBookId());
-            variant.setTitle(response.getVariantTitle());
+            variant.setTitle(response.getTitle());
             variant.setDescription(response.getDescription());
             variant.setIsbn(response.getIsbn());
             variant.setPrice(response.getPrice());
@@ -362,16 +369,23 @@ public class BookDetailFragment extends Fragment {
     }
 
     private void selectVariant(String variantId) {
-        for (int i = 0; i < bookVariants.size(); i++) {
-            if (bookVariants.get(i).getVariantId() == Integer.parseInt(variantId)) {
-                selectedVariant = bookVariants.get(i);
-                variantSpinner.setSelection(i);
-                displayBookInfo();
-                return;
+        int variantIdInt;
+        try {
+            variantIdInt = Integer.parseInt(variantId);
+
+            for (int i = 0; i < bookVariants.size(); i++) {
+                if (bookVariants.get(i).getVariantId() == variantIdInt) {
+                    selectedVariant = bookVariants.get(i);
+                    variantSpinner.setSelection(i);
+                    displayBookInfo();
+                    return;
+                }
             }
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "Invalid variant ID format: " + variantId, e);
         }
 
-        // If variant not found, use the first one
+        // If variant not found or invalid, use the first one
         if (!bookVariants.isEmpty()) {
             selectedVariant = bookVariants.get(0);
             variantSpinner.setSelection(0);

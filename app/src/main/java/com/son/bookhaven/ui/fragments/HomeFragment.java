@@ -17,17 +17,19 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.search.SearchBar;
 import com.google.android.material.search.SearchView;
 import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.BookApiService;
 import com.son.bookhaven.apiHelper.BookVariantApiService;
+import com.son.bookhaven.apiHelper.CategoryApiService;
+import com.son.bookhaven.data.adapters.CategoryAdapter;
 import com.son.bookhaven.data.adapters.FeaturedBooksAdapter;
 import com.son.bookhaven.data.adapters.NewArrivalsAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.response.BookVariantResponse;
+import com.son.bookhaven.data.dto.response.CategoryResponse;
 import com.son.bookhaven.data.model.BookVariant;
 import com.son.bookhaven.data.model.LanguageCode;
 import com.son.bookhaven.data.model.Author;
@@ -57,7 +59,6 @@ public class HomeFragment extends Fragment {
     private NewArrivalsAdapter newArrivalsAdapter;
     private NewArrivalsAdapter searchResultsAdapter;
     private MaterialButton btnCart;
-    private MaterialCardView cardFiction, cardNonFiction, cardBestsellers, cardNewArrivals;
     private SearchBar searchBar;
     private SearchView searchView;
 
@@ -69,6 +70,10 @@ public class HomeFragment extends Fragment {
     private BookApiService bookApiService;
     private BookVariantApiService bookVariantApiService;
 
+    private RecyclerView rvCategories;
+    private CategoryAdapter categoryAdapter;
+    private CategoryApiService categoryApiService;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -77,6 +82,7 @@ public class HomeFragment extends Fragment {
         // Initialize API services
         bookApiService = ApiClient.getClient().create(BookApiService.class);
         bookVariantApiService = ApiClient.getClient().create(BookVariantApiService.class);
+        categoryApiService = ApiClient.getClient().create(CategoryApiService.class);
 
         initViews(view);
         setupRecyclerViews();
@@ -85,27 +91,36 @@ public class HomeFragment extends Fragment {
 
         // Load book variants from the API
         loadBookVariantsFromApi();
+        loadCategoriesFromApi();
 
         return view;
     }
 
     private void initViews(View view) {
+        rvCategories = view.findViewById(R.id.rv_categories);
         rvFeaturedBooks = view.findViewById(R.id.rv_featured_books);
         rvNewArrivals = view.findViewById(R.id.rv_new_arrivals);
         btnCart = view.findViewById(R.id.btn_cart);
-        cardFiction = view.findViewById(R.id.card_fiction);
-        cardNonFiction = view.findViewById(R.id.card_non_fiction);
-        cardBestsellers = view.findViewById(R.id.card_bestsellers);
-        cardNewArrivals = view.findViewById(R.id.card_new_arrivals);
         searchBar = view.findViewById(R.id.search_bar);
         searchView = view.findViewById(R.id.search_view);
         rvSearchResults = view.findViewById(R.id.rv_search_results);
     }
 
     private void setupRecyclerViews() {
+        setupCategoriesRecyclerView();
         setupFeaturedBooksRecyclerView();
         setupNewArrivalsRecyclerView();
         setupSearchResultsRecyclerView();
+    }
+
+    private void setupCategoriesRecyclerView() {
+        rvCategories.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        categoryAdapter = new CategoryAdapter(new ArrayList<>());
+        categoryAdapter.setOnCategoryClickListener(category -> {
+            // Navigate to category detail showing all book variants in this category
+            navigateToCategoryBooks(category);
+        });
+        rvCategories.setAdapter(categoryAdapter);
     }
 
     private void setupFeaturedBooksRecyclerView() {
@@ -171,26 +186,6 @@ public class HomeFragment extends Fragment {
             Toast.makeText(getContext(), "Cart clicked", Toast.LENGTH_SHORT).show();
             // Navigate to cart fragment
         });
-
-        cardFiction.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Fiction category clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to fiction books
-        });
-
-        cardNonFiction.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Non-Fiction category clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to non-fiction books
-        });
-
-        cardBestsellers.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Bestsellers clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to bestsellers
-        });
-
-        cardNewArrivals.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "New Arrivals clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to new arrivals
-        });
     }
 
     private void setupSearchBarAndSearchView() {
@@ -255,6 +250,95 @@ public class HomeFragment extends Fragment {
         searchResultsAdapter.updateBookVariants(searchResults);
     }
 
+    private void loadCategoriesFromApi() {
+        categoryApiService.getAllCategories().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<CategoryResponse>>> call,
+                                   Response<ApiResponse<List<CategoryResponse>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<CategoryResponse> categories = response.body().getData();
+                    updateCategories(categories);
+                } else {
+                    // Handle API error
+                    String errorMsg = "Failed to load categories";
+                    if (response.body() != null) {
+                        errorMsg = response.body().getMessage();
+                    }
+                    showError(errorMsg);
+                    loadSampleCategoriesIfNeeded();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<List<CategoryResponse>>> call, Throwable t) {
+                Log.e(TAG, "Error loading categories", t);
+                showError("Network error: " + t.getMessage());
+                loadSampleCategoriesIfNeeded();
+            }
+        });
+    }
+
+    private void updateCategories(List<CategoryResponse> categories) {
+        if (categoryAdapter != null && categories != null) {
+            categoryAdapter.updateCategories(categories);
+        }
+    }
+
+    private void loadSampleCategoriesIfNeeded() {
+        List<CategoryResponse> sampleCategories = getSampleCategories();
+        updateCategories(sampleCategories);
+    }
+
+    private List<CategoryResponse> getSampleCategories() {
+        List<CategoryResponse> categories = new ArrayList<>();
+
+        CategoryResponse fiction = new CategoryResponse();
+        fiction.setCategoryId(1);
+        fiction.setCategoryName("Fiction");
+        fiction.setDescription("Fiction books");
+
+        CategoryResponse nonFiction = new CategoryResponse();
+        nonFiction.setCategoryId(2);
+        nonFiction.setCategoryName("Non-Fiction");
+        nonFiction.setDescription("Non-fiction books");
+
+        CategoryResponse scienceFiction = new CategoryResponse();
+        scienceFiction.setCategoryId(3);
+        scienceFiction.setCategoryName("Science Fiction");
+        scienceFiction.setDescription("Sci-fi books");
+
+        CategoryResponse fantasy = new CategoryResponse();
+        fantasy.setCategoryId(4);
+        fantasy.setCategoryName("Fantasy");
+        fantasy.setDescription("Fantasy books");
+
+        categories.add(fiction);
+        categories.add(nonFiction);
+        categories.add(scienceFiction);
+        categories.add(fantasy);
+
+        return categories;
+    }
+
+    private void navigateToCategoryBooks(CategoryResponse category) {
+        // Create a new fragment to display books by category
+        CategoryBooksFragment categoryBooksFragment = CategoryBooksFragment.newInstance(
+                category.getCategoryId(), category.getCategoryName());
+
+        // Get the FragmentManager and start a transaction
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+        // Replace the current fragment with CategoryBooksFragment
+        fragmentTransaction.replace(R.id.frame_layout, categoryBooksFragment);
+
+        // Add the transaction to the back stack so the user can navigate back
+        fragmentTransaction.addToBackStack(null);
+
+        // Commit the transaction
+        fragmentTransaction.commit();
+    }
+
     private void loadBookVariantsFromApi() {
         // Show loading indicator if you have one
 
@@ -312,7 +396,7 @@ public class HomeFragment extends Fragment {
         for (BookVariantResponse response : variantResponses) {
             BookVariant variant = new BookVariant();
             variant.setVariantId(response.getVariantId());
-            variant.setTitle(response.getVariantTitle());
+            variant.setTitle(response.getTitle());
             variant.setDescription(response.getDescription());
             variant.setBookId(response.getBookId());
             variant.setIsbn(response.getIsbn());
