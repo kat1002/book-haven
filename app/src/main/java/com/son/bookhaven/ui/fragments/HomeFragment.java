@@ -10,82 +10,117 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager; // Import FragmentManager
-import androidx.fragment.app.FragmentTransaction; // Import FragmentTransaction
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.search.SearchBar;
 import com.google.android.material.search.SearchView;
 import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.BookApiService;
+import com.son.bookhaven.apiHelper.BookVariantApiService;
+import com.son.bookhaven.apiHelper.CategoryApiService;
+import com.son.bookhaven.data.adapters.CategoryAdapter;
 import com.son.bookhaven.data.adapters.FeaturedBooksAdapter;
 import com.son.bookhaven.data.adapters.NewArrivalsAdapter;
-import com.son.bookhaven.data.model.Author;
-import com.son.bookhaven.data.model.Book;
-import com.son.bookhaven.data.model.BookImage;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.response.BookVariantResponse;
+import com.son.bookhaven.data.dto.response.CategoryResponse;
+import com.son.bookhaven.data.model.BookVariant;
 import com.son.bookhaven.data.model.LanguageCode;
+import com.son.bookhaven.data.model.Author;
+import com.son.bookhaven.data.model.Publisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class HomeFragment extends Fragment {
 
+    private static final String TAG = "HomeFragment";
     private RecyclerView rvFeaturedBooks, rvNewArrivals, rvSearchResults;
     private FeaturedBooksAdapter featuredBooksAdapter;
     private NewArrivalsAdapter newArrivalsAdapter;
     private NewArrivalsAdapter searchResultsAdapter;
     private MaterialButton btnCart;
-    private MaterialCardView cardFiction, cardNonFiction, cardBestsellers, cardNewArrivals;
     private SearchBar searchBar;
     private SearchView searchView;
 
-    private List<Book> allBooks = new ArrayList<>();
+    // Store all book variants
+    private List<BookVariant> allBookVariants = new ArrayList<>();
+    // Store only lowest price variants
+    private List<BookVariant> lowestPriceVariants = new ArrayList<>();
+
+    private BookApiService bookApiService;
+    private BookVariantApiService bookVariantApiService;
+
+    private RecyclerView rvCategories;
+    private CategoryAdapter categoryAdapter;
+    private CategoryApiService categoryApiService;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
+        // Initialize API services
+        bookApiService = ApiClient.getClient().create(BookApiService.class);
+        bookVariantApiService = ApiClient.getClient().create(BookVariantApiService.class);
+        categoryApiService = ApiClient.getClient().create(CategoryApiService.class);
+
         initViews(view);
         setupRecyclerViews();
         setupClickListeners();
         setupSearchBarAndSearchView();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            loadSampleData();
-        }
+        // Load book variants from the API
+        loadBookVariantsFromApi();
+        loadCategoriesFromApi();
 
         return view;
     }
 
     private void initViews(View view) {
+        rvCategories = view.findViewById(R.id.rv_categories);
         rvFeaturedBooks = view.findViewById(R.id.rv_featured_books);
         rvNewArrivals = view.findViewById(R.id.rv_new_arrivals);
         btnCart = view.findViewById(R.id.btn_cart);
-        cardFiction = view.findViewById(R.id.card_fiction);
-        cardNonFiction = view.findViewById(R.id.card_non_fiction);
-        cardBestsellers = view.findViewById(R.id.card_bestsellers);
-        cardNewArrivals = view.findViewById(R.id.card_new_arrivals);
         searchBar = view.findViewById(R.id.search_bar);
         searchView = view.findViewById(R.id.search_view);
         rvSearchResults = view.findViewById(R.id.rv_search_results);
     }
 
-    // Refactored setupRecyclerViews method (as per previous request)
     private void setupRecyclerViews() {
+        setupCategoriesRecyclerView();
         setupFeaturedBooksRecyclerView();
         setupNewArrivalsRecyclerView();
         setupSearchResultsRecyclerView();
+    }
+
+    private void setupCategoriesRecyclerView() {
+        rvCategories.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        categoryAdapter = new CategoryAdapter(new ArrayList<>());
+        categoryAdapter.setOnCategoryClickListener(category -> {
+            // Navigate to category detail showing all book variants in this category
+            navigateToCategoryBooks(category);
+        });
+        rvCategories.setAdapter(categoryAdapter);
     }
 
     private void setupFeaturedBooksRecyclerView() {
@@ -93,14 +128,14 @@ public class HomeFragment extends Fragment {
         featuredBooksAdapter = new FeaturedBooksAdapter(new ArrayList<>());
         featuredBooksAdapter.setOnBookClickListener(new FeaturedBooksAdapter.OnBookClickListener() {
             @Override
-            public void onBookClick(Book book) {
-                // Navigate to book details
-                navigateToBookDetail(book); // <--- CHANGED HERE
+            public void onBookClick(BookVariant variant) {
+                // Navigate to book variant details
+                navigateToBookDetail(variant);
             }
 
             @Override
-            public void onAddToCartClick(Book book) {
-                Toast.makeText(getContext(), "Added " + book.getTitle() + " to cart", Toast.LENGTH_SHORT).show();
+            public void onAddToCartClick(BookVariant variant) {
+                Toast.makeText(getContext(), "Added " + variant.getTitle() + " to cart", Toast.LENGTH_SHORT).show();
                 // Add to cart logic
             }
         });
@@ -112,14 +147,14 @@ public class HomeFragment extends Fragment {
         newArrivalsAdapter = new NewArrivalsAdapter(new ArrayList<>());
         newArrivalsAdapter.setOnBookClickListener(new NewArrivalsAdapter.OnBookClickListener() {
             @Override
-            public void onBookClick(Book book) {
-                // Navigate to book details
-                navigateToBookDetail(book); // <--- CHANGED HERE
+            public void onBookVariantClick(BookVariant variant) {
+                // Navigate to book variant details
+                navigateToBookDetail(variant);
             }
 
             @Override
-            public void onAddToCartClick(Book book) {
-                Toast.makeText(getContext(), "Added " + book.getTitle() + " to cart", Toast.LENGTH_SHORT).show();
+            public void onAddToCartClick(BookVariant variant) {
+                Toast.makeText(getContext(), "Added " + variant.getTitle() + " to cart", Toast.LENGTH_SHORT).show();
                 // Add to cart logic
             }
         });
@@ -131,46 +166,25 @@ public class HomeFragment extends Fragment {
         searchResultsAdapter = new NewArrivalsAdapter(new ArrayList<>());
         searchResultsAdapter.setOnBookClickListener(new NewArrivalsAdapter.OnBookClickListener() {
             @Override
-            public void onBookClick(Book book) {
-                // Navigate to book details from search results
-                navigateToBookDetail(book); // <--- CHANGED HERE
+            public void onBookVariantClick(BookVariant variant) {
+                // Navigate to book variant details from search results
+                navigateToBookDetail(variant);
                 searchView.hide(); // Hide search view after selection
             }
 
             @Override
-            public void onAddToCartClick(Book book) {
-                Toast.makeText(getContext(), "Added " + book.getTitle() + " to cart from search", Toast.LENGTH_SHORT).show();
+            public void onAddToCartClick(BookVariant variant) {
+                Toast.makeText(getContext(), "Added " + variant.getTitle() + " to cart from search", Toast.LENGTH_SHORT).show();
                 // Add to cart logic
             }
         });
         rvSearchResults.setAdapter(searchResultsAdapter);
     }
 
-
     private void setupClickListeners() {
         btnCart.setOnClickListener(v -> {
             Toast.makeText(getContext(), "Cart clicked", Toast.LENGTH_SHORT).show();
             // Navigate to cart fragment
-        });
-
-        cardFiction.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Fiction category clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to fiction books
-        });
-
-        cardNonFiction.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Non-Fiction category clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to non-fiction books
-        });
-
-        cardBestsellers.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Bestsellers clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to bestsellers
-        });
-
-        cardNewArrivals.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "New Arrivals clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to new arrivals
         });
     }
 
@@ -219,261 +233,389 @@ public class HomeFragment extends Fragment {
 
     private void performSearch(String query) {
         if (query == null || query.trim().isEmpty()) {
-            searchResultsAdapter.updateBooks(new ArrayList<>());
+            searchResultsAdapter.updateBookVariants(new ArrayList<>());
             return;
         }
 
-        List<Book> filteredBooks = allBooks.stream()
-                .filter(book -> book.getTitle().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)) ||
-                        book.getAuthors().stream()
-                                .anyMatch(author -> author.getAuthorName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))))
-                .collect(Collectors.toList());
+        // Search across all book variants
+        List<BookVariant> searchResults = allBookVariants.stream()
+            .filter(variant ->
+                variant.getTitle().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)) ||
+                (variant.getIsbn() != null && variant.getIsbn().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
+                (variant.getDescription() != null && variant.getDescription().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
+                (variant.getAuthors() != null && variant.getAuthors().stream().anyMatch(
+                        author -> author.getAuthorName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)))))
+            .collect(Collectors.toList());
 
-        searchResultsAdapter.updateBooks(filteredBooks);
+        searchResultsAdapter.updateBookVariants(searchResults);
     }
 
-    // --- New method to handle navigation to BookDetailFragment ---
-    private void navigateToBookDetail(Book book) {
-        // Create an instance of BookDetailFragment using the factory method
-        BookDetailFragment bookDetailFragment = BookDetailFragment.newInstance(book);
+    private void loadCategoriesFromApi() {
+        categoryApiService.getAllCategories().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<CategoryResponse>>> call,
+                                   Response<ApiResponse<List<CategoryResponse>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<CategoryResponse> categories = response.body().getData();
+                    updateCategories(categories);
+                } else {
+                    // Handle API error
+                    String errorMsg = "Failed to load categories";
+                    if (response.body() != null) {
+                        errorMsg = response.body().getMessage();
+                    }
+                    showError(errorMsg);
+                    loadSampleCategoriesIfNeeded();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<List<CategoryResponse>>> call, Throwable t) {
+                Log.e(TAG, "Error loading categories", t);
+                showError("Network error: " + t.getMessage());
+                loadSampleCategoriesIfNeeded();
+            }
+        });
+    }
+
+    private void updateCategories(List<CategoryResponse> categories) {
+        if (categoryAdapter != null && categories != null) {
+            categoryAdapter.updateCategories(categories);
+        }
+    }
+
+    private void loadSampleCategoriesIfNeeded() {
+        List<CategoryResponse> sampleCategories = getSampleCategories();
+        updateCategories(sampleCategories);
+    }
+
+    private List<CategoryResponse> getSampleCategories() {
+        List<CategoryResponse> categories = new ArrayList<>();
+
+        CategoryResponse fiction = new CategoryResponse();
+        fiction.setCategoryId(1);
+        fiction.setCategoryName("Fiction");
+        fiction.setDescription("Fiction books");
+
+        CategoryResponse nonFiction = new CategoryResponse();
+        nonFiction.setCategoryId(2);
+        nonFiction.setCategoryName("Non-Fiction");
+        nonFiction.setDescription("Non-fiction books");
+
+        CategoryResponse scienceFiction = new CategoryResponse();
+        scienceFiction.setCategoryId(3);
+        scienceFiction.setCategoryName("Science Fiction");
+        scienceFiction.setDescription("Sci-fi books");
+
+        CategoryResponse fantasy = new CategoryResponse();
+        fantasy.setCategoryId(4);
+        fantasy.setCategoryName("Fantasy");
+        fantasy.setDescription("Fantasy books");
+
+        categories.add(fiction);
+        categories.add(nonFiction);
+        categories.add(scienceFiction);
+        categories.add(fantasy);
+
+        return categories;
+    }
+
+    private void navigateToCategoryBooks(CategoryResponse category) {
+        // Create a new fragment to display books by category
+        CategoryBooksFragment categoryBooksFragment = CategoryBooksFragment.newInstance(
+                category.getCategoryId(), category.getCategoryName());
 
         // Get the FragmentManager and start a transaction
         FragmentManager fragmentManager = getParentFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 
-        // Replace the current fragment (HomeFragment) with BookDetailFragment
-        // R.id.fragment_container should be the ID of the container where your fragments are displayed
-        fragmentTransaction.replace(R.id.frame_layout, bookDetailFragment);
+        // Replace the current fragment with CategoryBooksFragment
+        fragmentTransaction.replace(R.id.frame_layout, categoryBooksFragment);
 
         // Add the transaction to the back stack so the user can navigate back
-        fragmentTransaction.addToBackStack(null); // You can give it a name if you need to pop by name
+        fragmentTransaction.addToBackStack(null);
 
         // Commit the transaction
         fragmentTransaction.commit();
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private void loadSampleData() {
-        Log.d("HomeFragment", "Loading sample data...");
+    private void loadBookVariantsFromApi() {
+        // Show loading indicator if you have one
 
-        // Sample Featured Books Data
-        List<Book> featuredBooks = new ArrayList<>();
+        // Call the API to get all book variants
+        bookVariantApiService.getAllVariants().enqueue(new Callback<ApiResponse<List<BookVariantResponse>>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<BookVariantResponse>>> call, Response<ApiResponse<List<BookVariantResponse>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<BookVariantResponse> variantResponses = response.body().getData();
+                    allBookVariants = convertToBookVariantModels(variantResponses);
 
-        // Book 1: The Silent Echo
-        Book book1 = new Book();
-        book1.setBookId(1);
-        book1.setTitle("The Silent Echo");
-        book1.setPublisherId(101);
-        book1.setCategoryId(1);
-        book1.setPublicationYear(2023);
-        book1.setPrice(new BigDecimal("19.99"));
-        book1.setIsbn("978-0-123456-78-9");
-        book1.setLanguage(LanguageCode.English);
-        book1.setCreatedAt(LocalDateTime.now().minusDays(30));
-        book1.setUpdatedAt(LocalDateTime.now().minusDays(5));
+                    // Process to get only lowest price variants per book ID
+                    lowestPriceVariants = getLowestPriceVariantPerBook(allBookVariants);
 
-        // Add authors for book1
-        Set<Author> authors1 = new HashSet<>();
+                    // Update UI with fetched book variants
+                    updateFeaturedBooks();
+                    updateNewArrivals();
+                } else {
+                    // Handle API error
+                    String errorMsg = "Failed to load books";
+                    if (response.body() != null) {
+                        errorMsg = response.body().getMessage();
+                    }
+                    showError(errorMsg);
+                    loadSampleDataIfNeeded();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<List<BookVariantResponse>>> call, Throwable t) {
+                Log.e(TAG, "Error loading book variants", t);
+                showError("Network error: " + t.getMessage());
+                loadSampleDataIfNeeded();
+            }
+        });
+    }
+
+    private List<BookVariant> getLowestPriceVariantPerBook(List<BookVariant> allVariants) {
+        Map<Integer, BookVariant> lowestPriceMap = new HashMap<>();
+
+        for (BookVariant variant : allVariants) {
+            int bookId = variant.getBookId();
+            if (!lowestPriceMap.containsKey(bookId) ||
+                    variant.getPrice().compareTo(lowestPriceMap.get(bookId).getPrice()) < 0) {
+                lowestPriceMap.put(bookId, variant);
+            }
+        }
+
+        return new ArrayList<>(lowestPriceMap.values());
+    }
+
+    private List<BookVariant> convertToBookVariantModels(List<BookVariantResponse> variantResponses) {
+        List<BookVariant> variants = new ArrayList<>();
+
+        for (BookVariantResponse response : variantResponses) {
+            BookVariant variant = new BookVariant();
+            variant.setVariantId(response.getVariantId());
+            variant.setTitle(response.getTitle());
+            variant.setDescription(response.getDescription());
+            variant.setBookId(response.getBookId());
+            variant.setIsbn(response.getIsbn());
+            variant.setPrice(response.getPrice());
+            variant.setStock(response.getStock());
+            variant.setCategoryId(response.getCategoryId());
+            variant.setPublisherId(response.getPublisherId());
+            variant.setPublicationYear(response.getPublicationYear());
+
+            // Convert language code string to enum
+            if (response.getLanguage() != null) {
+                try {
+                    variant.setLanguage(LanguageCode.valueOf(response.getLanguage()));
+                } catch (IllegalArgumentException e) {
+                    Log.e(TAG, "Invalid language code: " + response.getLanguage());
+                }
+            }
+
+            // Set created/updated dates
+            if (response.getCreatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+                    variant.setCreatedAt(LocalDateTime.parse(response.getCreatedAt(), formatter));
+                } catch (Exception e) {
+                    Log.e(TAG, "Date parsing error", e);
+                }
+            }
+
+            if (response.getUpdatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+                    variant.setUpdatedAt(LocalDateTime.parse(response.getUpdatedAt(), formatter));
+                } catch (Exception e) {
+                    Log.e(TAG, "Date parsing error", e);
+                }
+            }
+
+            // Set related entities
+            variant.setCategory(response.getCategory());
+            variant.setPublisher(response.getPublisher());
+            variant.setAuthors(new HashSet<>(response.getAuthors()));
+            variant.setBookImages(response.getImages());
+
+            variants.add(variant);
+        }
+
+        return variants;
+    }
+
+    // Method to navigate to BookVariantDetailFragment
+    private void navigateToBookDetail(BookVariant variant) {
+        // Create an instance of BookVariantDetailFragment using the factory method
+        BookDetailFragment bookDetailFragment = BookDetailFragment.newInstance(String.valueOf(variant.getBookId()),
+                String.valueOf(variant.getVariantId()));
+
+        // Get the FragmentManager and start a transaction
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+        // Replace the current fragment (HomeFragment) with BookVariantDetailFragment
+        fragmentTransaction.replace(R.id.frame_layout, bookDetailFragment);
+
+        // Add the transaction to the back stack so the user can navigate back
+        fragmentTransaction.addToBackStack(null);
+
+        // Commit the transaction
+        fragmentTransaction.commit();
+    }
+
+    private void showError(String message) {
+        if (getContext() != null) {
+            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Loads sample book variant data as a fallback when API calls fail.
+     */
+    private void loadSampleDataIfNeeded() {
+        // Only load sample data if we don't have any variants loaded yet
+        if (allBookVariants == null || allBookVariants.isEmpty()) {
+            allBookVariants = getSampleBookVariants();
+            lowestPriceVariants = getLowestPriceVariantPerBook(allBookVariants);
+
+            // Update UI with sample data
+            updateFeaturedBooks();
+            updateNewArrivals();
+
+            // Show a message that we're using sample data
+            if (getContext() != null) {
+                Toast.makeText(getContext(), "Showing sample data", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    /**
+     * Creates a list of sample book variants to display when offline or when API fails.
+     */
+    private List<BookVariant> getSampleBookVariants() {
+        List<BookVariant> sampleVariants = new ArrayList<>();
+
+        // Sample book variants for book ID 1
+        BookVariant variant1A = new BookVariant();
+        variant1A.setVariantId(101);
+        variant1A.setTitle("The Great Gatsby (Hardcover)");
+        variant1A.setDescription("A classic novel about American society in the 1920s");
+        variant1A.setBookId(1);
+        variant1A.setIsbn("9780743273565");
+        variant1A.setPrice(new BigDecimal("14.99"));
+        variant1A.setStock(50);
+        variant1A.setCategoryId(1);
+        variant1A.setPublisherId(1);
+        variant1A.setPublicationYear(1925);
+        variant1A.setLanguage(LanguageCode.English);
+
+        Publisher publisher1 = new Publisher();
+        publisher1.setPublisherId(1);
+        publisher1.setPublisherName("Scribner");
+        variant1A.setPublisher(publisher1);
+
         Author author1 = new Author();
         author1.setAuthorId(1);
-        author1.setAuthorName("Sarah Johnson");
+        author1.setAuthorName("F. Scott Fitzgerald");
+        Set<Author> authors1 = new HashSet<>();
         authors1.add(author1);
-        book1.setAuthors(authors1);
+        variant1A.setAuthors(authors1);
 
-        List<BookImage> bookImages1 = new ArrayList<>();
-        BookImage bookImage1 = new BookImage();
-        bookImage1.setBookImageId(1);
-        bookImage1.setImageUrl("https://picsum.photos/200/300?random=1"); // Placeholder image
-        bookImages1.add(bookImage1);
-        book1.setBookImages(bookImages1);
+        BookVariant variant1B = new BookVariant();
+        variant1B.setVariantId(102);
+        variant1B.setTitle("The Great Gatsby (Paperback)");
+        variant1B.setDescription("A classic novel about American society in the 1920s");
+        variant1B.setBookId(1);
+        variant1B.setIsbn("9780743273566");
+        variant1B.setPrice(new BigDecimal("9.99"));
+        variant1B.setStock(100);
+        variant1B.setCategoryId(1);
+        variant1B.setPublisherId(1);
+        variant1B.setPublicationYear(1925);
+        variant1B.setLanguage(LanguageCode.English);
+        variant1B.setPublisher(publisher1);
+        variant1B.setAuthors(authors1);
 
-        featuredBooks.add(book1);
+        // Add both variants to the list
+        sampleVariants.add(variant1A);
+        sampleVariants.add(variant1B);
 
-        // Book 2: Digital Dreams
-        Book book2 = new Book();
-        book2.setBookId(2);
-        book2.setTitle("Digital Dreams");
-        book2.setPublisherId(102);
-        book2.setCategoryId(2);
-        book2.setPublicationYear(2024);
-        book2.setPrice(new BigDecimal("24.99"));
-        book2.setIsbn("978-0-234567-89-0");
-        book2.setLanguage(LanguageCode.English);
-        book2.setCreatedAt(LocalDateTime.now().minusDays(25));
-        book2.setUpdatedAt(LocalDateTime.now().minusDays(3));
+        // Sample book variants for book ID 2
+        BookVariant variant2A = new BookVariant();
+        variant2A.setVariantId(201);
+        variant2A.setTitle("To Kill a Mockingbird (Hardcover)");
+        variant2A.setDescription("Harper Lee's Pulitzer Prize-winning masterwork");
+        variant2A.setBookId(2);
+        variant2A.setIsbn("9780061120084");
+        variant2A.setPrice(new BigDecimal("16.99"));
+        variant2A.setStock(40);
+        variant2A.setCategoryId(1);
+        variant2A.setPublisherId(2);
+        variant2A.setPublicationYear(1960);
+        variant2A.setLanguage(LanguageCode.English);
 
-        // Add authors for book2
-        Set<Author> authors2 = new HashSet<>();
+        Publisher publisher2 = new Publisher();
+        publisher2.setPublisherId(2);
+        publisher2.setPublisherName("HarperCollins");
+        variant2A.setPublisher(publisher2);
+
         Author author2 = new Author();
         author2.setAuthorId(2);
-        author2.setAuthorName("Alex Chen");
+        author2.setAuthorName("Harper Lee");
+        Set<Author> authors2 = new HashSet<>();
         authors2.add(author2);
-        book2.setAuthors(authors2);
+        variant2A.setAuthors(authors2);
 
-        book2.setBookImages(bookImages1);
+        BookVariant variant2B = new BookVariant();
+        variant2B.setVariantId(202);
+        variant2B.setTitle("To Kill a Mockingbird (Paperback)");
+        variant2B.setDescription("Harper Lee's Pulitzer Prize-winning masterwork");
+        variant2B.setBookId(2);
+        variant2B.setIsbn("9780061120085");
+        variant2B.setPrice(new BigDecimal("10.99"));
+        variant2B.setStock(85);
+        variant2B.setCategoryId(1);
+        variant2B.setPublisherId(2);
+        variant2B.setPublicationYear(1960);
+        variant2B.setLanguage(LanguageCode.English);
+        variant2B.setPublisher(publisher2);
+        variant2B.setAuthors(authors2);
 
-        featuredBooks.add(book2);
+        // Add both variants to the list
+        sampleVariants.add(variant2A);
+        sampleVariants.add(variant2B);
 
-        // Book 3: Ocean's Mystery
-        Book book3 = new Book();
-        book3.setBookId(3);
-        book3.setTitle("Ocean's Mystery");
-        book3.setPublisherId(103);
-        book3.setCategoryId(3);
-        book3.setPublicationYear(2023);
-        book3.setPrice(new BigDecimal("21.99"));
-        book3.setIsbn("978-0-345678-90-1");
-        book3.setLanguage(LanguageCode.English);
-        book3.setCreatedAt(LocalDateTime.now().minusDays(20));
-        book3.setUpdatedAt(LocalDateTime.now().minusDays(2));
+        return sampleVariants;
+    }
 
-        // Add authors for book3
-        Set<Author> authors3 = new HashSet<>();
-        Author author3 = new Author();
-        author3.setAuthorId(3);
-        author3.setAuthorName("Maria Rodriguez");
-        authors3.add(author3);
-        book3.setAuthors(authors3);
+    private void updateFeaturedBooks() {
+        if (featuredBooksAdapter != null && !lowestPriceVariants.isEmpty()) {
+            // Get up to 5 variants for featured display
+            int maxFeatured = Math.min(lowestPriceVariants.size(), 5);
+            List<BookVariant> featuredVariants = lowestPriceVariants.subList(0, maxFeatured);
+            featuredBooksAdapter.updateBookVariants(featuredVariants);
+        }
+    }
 
-        book3.setBookImages(bookImages1);
-        featuredBooks.add(book3);
+    private void updateNewArrivals() {
+        if (newArrivalsAdapter != null && !lowestPriceVariants.isEmpty()) {
+            // For new arrivals, get the most recently created variants
+            List<BookVariant> newVariants = new ArrayList<>(lowestPriceVariants);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                newVariants.sort((a, b) -> {
+                    if (a.getCreatedAt() == null || b.getCreatedAt() == null) {
+                        return 0;
+                    }
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                });
+            }
 
-        // Book 4: City Lights
-        Book book4 = new Book();
-        book4.setBookId(4);
-        book4.setTitle("City Lights");
-        book4.setPublisherId(104);
-        book4.setCategoryId(4);
-        book4.setPublicationYear(2024);
-        book4.setPrice(new BigDecimal("18.99"));
-        book4.setIsbn("978-0-456789-01-2");
-        book4.setLanguage(LanguageCode.English);
-        book4.setCreatedAt(LocalDateTime.now().minusDays(15));
-        book4.setUpdatedAt(LocalDateTime.now().minusDays(1));
-
-        // Add authors for book4
-        Set<Author> authors4 = new HashSet<>();
-        Author author4 = new Author();
-        author4.setAuthorId(4);
-        author4.setAuthorName("David Kim");
-        authors4.add(author4);
-        book4.setAuthors(authors4);
-
-        book4.setBookImages(bookImages1);
-        featuredBooks.add(book4);
-
-        // Sample New Arrivals Data
-        List<Book> newArrivals = new ArrayList<>();
-
-        // Book 5: The Last Secret
-        Book book5 = new Book();
-        book5.setBookId(5);
-        book5.setTitle("The Last Secret");
-        book5.setPublisherId(105);
-        book5.setCategoryId(5);
-        book5.setPublicationYear(2024);
-        book5.setPrice(new BigDecimal("24.99"));
-        book5.setIsbn("978-0-567890-12-3");
-        book5.setLanguage(LanguageCode.English);
-        book5.setCreatedAt(LocalDateTime.now().minusDays(10));
-        book5.setUpdatedAt(LocalDateTime.now());
-
-        // Add authors for book5
-        Set<Author> authors5 = new HashSet<>();
-        Author author5 = new Author();
-        author5.setAuthorId(5);
-        author5.setAuthorName("Michael Blake");
-        authors5.add(author5);
-        book5.setAuthors(authors5);
-
-        book5.setBookImages(bookImages1);
-        newArrivals.add(book5);
-
-        // Book 6: Quantum Physics
-        Book book6 = new Book();
-        book6.setBookId(6);
-        book6.setTitle("Quantum Physics");
-        book6.setPublisherId(106);
-        book6.setCategoryId(6);
-        book6.setPublicationYear(2024);
-        book6.setPrice(new BigDecimal("32.99"));
-        book6.setIsbn("978-0-678901-23-4");
-        book6.setLanguage(LanguageCode.English);
-        book6.setCreatedAt(LocalDateTime.now().minusDays(8));
-        book6.setUpdatedAt(LocalDateTime.now());
-
-        // Add authors for book6
-        Set<Author> authors6 = new HashSet<>();
-        Author author6 = new Author();
-        author6.setAuthorId(6);
-        author6.setAuthorName("Dr. Lisa Wong");
-        authors6.add(author6);
-        book6.setAuthors(authors6);
-
-        book6.setBookImages(bookImages1);
-        newArrivals.add(book6);
-
-        // Book 7: Modern Art
-        Book book7 = new Book();
-        book7.setBookId(7);
-        book7.setTitle("Modern Art");
-        book7.setPublisherId(107);
-        book7.setCategoryId(7);
-        book7.setPublicationYear(2024);
-        book7.setPrice(new BigDecimal("28.99"));
-        book7.setIsbn("978-0-789012-34-5");
-        book7.setLanguage(LanguageCode.English);
-        book7.setCreatedAt(LocalDateTime.now().minusDays(6));
-        book7.setUpdatedAt(LocalDateTime.now());
-
-        // Add authors for book7
-        Set<Author> authors7 = new HashSet<>();
-        Author author7 = new Author();
-        author7.setAuthorId(7);
-        author7.setAuthorName("Emma Thompson");
-        authors7.add(author7);
-        book7.setAuthors(authors7);
-
-        book7.setBookImages(bookImages1);
-        newArrivals.add(book7);
-
-        // Book 8: Cooking Mastery
-        Book book8 = new Book();
-        book8.setBookId(8);
-        book8.setTitle("Cooking Mastery");
-        book8.setPublisherId(108);
-        book8.setCategoryId(8);
-        book8.setPublicationYear(2024);
-        book8.setPrice(new BigDecimal("26.99"));
-        book8.setIsbn("978-0-890123-45-6");
-        book8.setLanguage(LanguageCode.English);
-        book8.setCreatedAt(LocalDateTime.now().minusDays(4));
-        book8.setUpdatedAt(LocalDateTime.now());
-
-        // Add authors for book8
-        Set<Author> authors8 = new HashSet<>();
-        Author author8 = new Author();
-        author8.setAuthorId(8);
-        author8.setAuthorName("Chef Roberto");
-        authors8.add(author8);
-        book8.setAuthors(authors8);
-
-        book8.setBookImages(bookImages1);
-        newArrivals.add(book8);
-
-        // Update adapters
-        if (featuredBooksAdapter != null && newArrivalsAdapter != null) {
-            featuredBooksAdapter.updateBooks(featuredBooks);
-            newArrivalsAdapter.updateBooks(newArrivals);
-
-            // Populate allBooks list for searching
-            allBooks.clear();
-            allBooks.addAll(featuredBooks);
-            allBooks.addAll(newArrivals);
-            // In a real app, you would fetch a comprehensive list of all books
-            // from your data source to populate 'allBooks'.
-        } else {
-            Log.e("HomeFragment", "Adapters not initialized yet");
+            int maxNew = Math.min(newVariants.size(), 10);
+            List<BookVariant> recentVariants = newVariants.subList(0, maxNew);
+            newArrivalsAdapter.updateBookVariants(recentVariants);
         }
     }
 }

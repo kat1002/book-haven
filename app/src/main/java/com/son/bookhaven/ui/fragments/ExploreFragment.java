@@ -1,16 +1,19 @@
-package com.son.bookhaven.ui.fragments; // A new package for explore UI
+package com.son.bookhaven.ui.fragments;
 
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -19,28 +22,31 @@ import com.google.android.material.search.SearchBar;
 import com.google.android.material.search.SearchView;
 import com.google.android.material.snackbar.Snackbar;
 import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.BookApiService;
+import com.son.bookhaven.apiHelper.BookVariantApiService;
 import com.son.bookhaven.data.adapters.ExploreBookAdapter;
-import com.son.bookhaven.data.model.Author;
-import com.son.bookhaven.data.model.Book;
-import com.son.bookhaven.data.model.BookImage;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.response.BookVariantResponse;
+import com.son.bookhaven.data.model.BookVariant;
 import com.son.bookhaven.data.model.LanguageCode;
-import com.son.bookhaven.data.model.Publisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection; // Added import
-import java.util.Collections; // Added import
-import java.util.Comparator; // Added import
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
-import java.util.stream.Collectors; // Added import for Java 8 stream operations
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnItemClickListener,
-        FilterBottomSheetDialogFragment.FilterApplyListener { // Implemented FilterApplyListener
+        FilterBottomSheetDialogFragment.FilterApplyListener {
+
+    private static final String TAG = "ExploreFragment";
 
     private SearchBar searchBar;
     private SearchView searchView;
@@ -48,16 +54,24 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
     private MaterialButton btnCart;
     private RecyclerView recyclerViewExploreBooks;
     private ExploreBookAdapter exploreBookAdapter;
-    private RecyclerView rvExploreSearchResults; // For search view results
+    private RecyclerView rvExploreSearchResults;
+    private ExploreBookAdapter searchResultsAdapter;
 
-    private List<Book> allBooks; // To hold all books for display and search
-    private List<Book> filteredBooks; // Books after applying filters (excluding search)
+    private List<BookVariant> allBookVariants = new ArrayList<>();
+    private List<BookVariant> filteredBookVariants = new ArrayList<>();
+
+    // API service
+    private BookApiService bookApiService;
+    private BookVariantApiService bookVariantApiService;
 
     // Current filter state
-    private String currentFilterCategory = null;
-    private BigDecimal currentFilterMinPrice = null;
-    private BigDecimal currentFilterMaxPrice = null;
-
+    private Double currentFilterMinPrice = null;
+    private Double currentFilterMaxPrice = null;
+    private Integer currentFilterAuthorId = null;
+    private Integer currentFilterCategoryId = null;
+    private Integer currentFilterPublisherId = null;
+    private LanguageCode currentFilterLanguage = null;
+    private boolean isLoading = false;
 
     public ExploreFragment() {
         // Required empty public constructor
@@ -68,298 +82,284 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_explore, container, false);
 
+        // Initialize API services
+        bookApiService = ApiClient.getClient().create(BookApiService.class);
+        bookVariantApiService = ApiClient.getClient().create(BookVariantApiService.class);
+
         // Initialize UI components
         searchBar = view.findViewById(R.id.search_bar_explore);
         searchView = view.findViewById(R.id.search_view_explore);
         btnFilter = view.findViewById(R.id.btn_filter);
         btnCart = view.findViewById(R.id.btn_cart_explore);
         recyclerViewExploreBooks = view.findViewById(R.id.recyclerViewExploreBooks);
-        rvExploreSearchResults = searchView.findViewById(R.id.rv_explore_search_results); // Get the RecyclerView from SearchView
+        rvExploreSearchResults = view.findViewById(R.id.rv_explore_search_results);
+
+        // Setup RecyclerView
+        setupRecyclerView();
+
+        // Setup search functionality
+        setupSearch();
+
+        // Setup filter button
+        setupFilterButton();
+
+        // Load books
+        loadBookVariants();
 
         return view;
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        // Populate dummy data
-        allBooks = generateDummyBooks();
-        filteredBooks = new ArrayList<>(allBooks); // Initially, filtered books are all books
-
-        // Setup RecyclerView for 2-column display
-        recyclerViewExploreBooks.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        exploreBookAdapter = new ExploreBookAdapter(filteredBooks, this);
+    private void setupRecyclerView() {
+        // Setup main explore recyclerview
+        GridLayoutManager layoutManager = new GridLayoutManager(getContext(), 2);
+        recyclerViewExploreBooks.setLayoutManager(layoutManager);
+        exploreBookAdapter = new ExploreBookAdapter(new ArrayList<>(), this);
         recyclerViewExploreBooks.setAdapter(exploreBookAdapter);
 
-        // Setup SearchBar and SearchView
-        searchView.setupWithSearchBar(searchBar);
+        // Setup search results recyclerview
+        GridLayoutManager searchLayoutManager = new GridLayoutManager(getContext(), 2);
+        rvExploreSearchResults.setLayoutManager(searchLayoutManager);
+        searchResultsAdapter = new ExploreBookAdapter(new ArrayList<>(), this);
+        rvExploreSearchResults.setAdapter(searchResultsAdapter);
+    }
 
-        // Setup RecyclerView for search results within SearchView
-        rvExploreSearchResults.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        // The search results adapter will be created and updated dynamically
+    private void setupSearch() {
+        searchBar.setOnClickListener(v -> searchView.show());
+        searchView.setupWithSearchBar(searchBar);
 
         searchView.getEditText().addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) { /* Not used */ }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // Not used
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Perform search on filteredBooks (which already has category/price filters applied)
                 performSearch(s.toString());
             }
 
             @Override
-            public void afterTextChanged(Editable s) { /* Not used */ }
+            public void afterTextChanged(Editable s) {
+                // Not used
+            }
         });
-
-
-        // Setup filter button
-        btnFilter.setOnClickListener(v -> {
-            showFilterBottomSheet();
-        });
-
-        // Setup cart button
-        btnCart.setOnClickListener(v -> {
-            Snackbar.make(view, "Navigate to Cart", Snackbar.LENGTH_SHORT).show();
-            // TODO: Implement navigation to cart fragment/activity
-        });
-
-        // Initially apply filters (if any saved state or defaults)
-        applyFiltersToBooks();
     }
 
-    /**
-     * Shows the filter bottom sheet dialog.
-     */
+    private void setupFilterButton() {
+        btnFilter.setOnClickListener(v -> showFilterBottomSheet());
+    }
+
     private void showFilterBottomSheet() {
-        FilterBottomSheetDialogFragment filterBottomSheet = FilterBottomSheetDialogFragment.newInstance(
-                currentFilterCategory, currentFilterMinPrice, currentFilterMaxPrice
-        );
-        filterBottomSheet.setFilterApplyListener(this); // Set this fragment as the listener
-        filterBottomSheet.show(getParentFragmentManager(), filterBottomSheet.getTag());
+        FilterBottomSheetDialogFragment filterBottomSheet = new FilterBottomSheetDialogFragment();
+        filterBottomSheet.setFilterApplyListener(this);
+        filterBottomSheet.show(getChildFragmentManager(), filterBottomSheet.getTag());
     }
 
-    /**
-     * Callback from FilterBottomSheetDialogFragment when filters are applied.
-     * @param category The selected category, or null if no category selected.
-     * @param minPrice The minimum price, or null if not set.
-     * @param maxPrice The maximum price, or null if not set.
-     */
-    @Override
-    public void onFilterApplied(String category, BigDecimal minPrice, BigDecimal maxPrice) {
-        currentFilterCategory = category;
-        currentFilterMinPrice = minPrice;
-        currentFilterMaxPrice = maxPrice;
-        applyFiltersToBooks();
-        // Clear search view if filters are applied to show full filtered list
-        searchView.setText(""); // This will trigger onTextChanged and clear search results
-    }
+    private void loadBookVariants() {
+        isLoading = true;
 
-    /**
-     * Applies the current filter criteria to the `allBooks` list and updates `filteredBooks`.
-     */
-    private void applyFiltersToBooks() {
-        List<Book> tempFilteredList = new ArrayList<>();
+        bookVariantApiService.getAllVariants().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<BookVariantResponse>>> call,
+                                   Response<ApiResponse<List<BookVariantResponse>>> response) {
+                isLoading = false;
 
-        for (Book book : allBooks) {
-            boolean matchesCategory = true;
-            if (currentFilterCategory != null && !currentFilterCategory.isEmpty()) {
-                // Check if any of the book's authors match the category name for simplicity
-                // In a real app, 'category' would be a proper Category object linked to the book
-                boolean foundCategory = false;
-                if (book.getAuthors() != null) { // For this dummy data, we are mapping category to author for simplicity
-                    for (Author author : book.getAuthors()) {
-                        if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_fiction)) && Arrays.asList("Matt Haig", "Colleen Hoover", "Delia Owens", "George Orwell", "Jane Austen", "Harper Lee", "F. Scott Fitzgerald", "Kristin Hannah").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        } else if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_non_fiction)) && Arrays.asList("James Clear", "Tara Westover", "Michelle Obama", "Walter Isaacson").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        } else if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_science)) && Arrays.asList("Carl Sagan", "Stephen Hawking").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        } else if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_history)) && Arrays.asList("Yuval Noah Harari", "Erik Larson").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        } else if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_fantasy)) && Arrays.asList("J.R.R. Tolkien", "Brandon Sanderson").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        } else if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_thriller)) && Arrays.asList("Stephen King", "Alex Michaelides", "Lucy Folk", "Gillian Flynn").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        } else if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_romance)) && Arrays.asList("Helen Hoang", "Casey McQuiston").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        } else if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_biography)) && Arrays.asList("Michelle Obama", "Walter Isaacson").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        } else if (currentFilterCategory.equalsIgnoreCase(getString(R.string.category_programming)) && Arrays.asList("Robert C. Martin", "Martin Fowler").contains(author.getAuthorName())) {
-                            foundCategory = true; break;
-                        }
-                    }
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<BookVariantResponse> bookVariantResponses = response.body().getData();
+                    allBookVariants = convertToBookVariantModels(bookVariantResponses);
+                    filteredBookVariants = new ArrayList<>(allBookVariants);
+                    exploreBookAdapter.updateBookVariants(filteredBookVariants);
+                } else {
+                    showError("Failed to load books");
                 }
-                matchesCategory = foundCategory;
             }
 
-            boolean matchesPrice = true;
-            if (currentFilterMinPrice != null && book.getPrice().compareTo(currentFilterMinPrice) < 0) {
-                matchesPrice = false;
+            @Override
+            public void onFailure(Call<ApiResponse<List<BookVariantResponse>>> call, Throwable t) {
+                isLoading = false;
+                Log.e(TAG, "Error loading book variants", t);
+                showError("Network error: " + t.getMessage());
             }
-            if (currentFilterMaxPrice != null && book.getPrice().compareTo(currentFilterMaxPrice) > 0) {
-                matchesPrice = false;
-            }
-
-            if (matchesCategory && matchesPrice) {
-                tempFilteredList.add(book);
-            }
-        }
-
-        filteredBooks.clear();
-        filteredBooks.addAll(tempFilteredList);
-        exploreBookAdapter.notifyDataSetChanged();
-
-        // Update the search results view as well if search view is active
-        // This will happen automatically via text watcher if search text is not empty
-        // but if it is empty, this ensures the main list is updated correctly.
-        if (searchView.isShowing()) {
-            performSearch(searchView.getText().toString());
-        }
-
-        Snackbar.make(requireView(), String.format(Locale.getDefault(), getString(R.string.filter_results_count), filteredBooks.size()), Snackbar.LENGTH_SHORT).show();
+        });
     }
 
+    private List<BookVariant> convertToBookVariantModels(List<BookVariantResponse> responses) {
+        List<BookVariant> variants = new ArrayList<>();
 
-    /**
-     * Performs search on the `filteredBooks` list and updates the search results RecyclerView.
-     * @param query The search query.
-     */
+        for (BookVariantResponse response : responses) {
+            BookVariant variant = new BookVariant();
+            variant.setVariantId(response.getVariantId());
+            variant.setBookId(response.getBookId());
+            variant.setTitle(response.getTitle());
+            variant.setDescription(response.getDescription());
+            variant.setIsbn(response.getIsbn());
+            variant.setPrice(response.getPrice());
+            variant.setStock(response.getStock());
+            variant.setCategoryId(response.getCategoryId());
+            variant.setPublisherId(response.getPublisherId());
+            variant.setPublicationYear(response.getPublicationYear());
+
+            // Convert language code string to enum
+            if (response.getLanguage() != null) {
+                try {
+                    variant.setLanguage(LanguageCode.valueOf(response.getLanguage()));
+                } catch (IllegalArgumentException e) {
+                    Log.e(TAG, "Invalid language code: " + response.getLanguage());
+                }
+            }
+
+            // Set created/updated dates
+            if (response.getCreatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                try {
+                    DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+                    variant.setCreatedAt(LocalDateTime.parse(response.getCreatedAt(), formatter));
+                } catch (Exception e) {
+                    Log.e(TAG, "Date parsing error", e);
+                }
+            }
+
+            // Set related entities
+            variant.setCategory(response.getCategory());
+            variant.setPublisher(response.getPublisher());
+            variant.setAuthors(new HashSet<>(response.getAuthors()));
+            variant.setBookImages(response.getImages());
+
+            variants.add(variant);
+        }
+
+        return variants;
+    }
+
     private void performSearch(String query) {
-        List<Book> searchResults = new ArrayList<>();
-        if (query.isEmpty()) {
-            // If search query is empty, show the currently filtered books in main RecyclerView
-            // and clear search results RecyclerView
-            recyclerViewExploreBooks.setVisibility(View.VISIBLE);
-            rvExploreSearchResults.setVisibility(View.GONE);
-            exploreBookAdapter.notifyDataSetChanged(); // Re-notify main adapter to ensure it's up-to-date
+        if (query == null || query.trim().isEmpty()) {
+            searchResultsAdapter.updateBookVariants(new ArrayList<>());
             return;
         }
 
-        for (Book book : filteredBooks) { // Search within the already filtered books
-            boolean matchesTitle = book.getTitle() != null && book.getTitle().toLowerCase().contains(query.toLowerCase());
-            boolean matchesAuthor = false;
-            if (book.getAuthors() != null) {
-                for (Author author : book.getAuthors()) {
-                    if (author.getAuthorName() != null && author.getAuthorName().toLowerCase().contains(query.toLowerCase())) {
-                        matchesAuthor = true;
-                        break;
-                    }
-                }
-            }
-            if (matchesTitle || matchesAuthor) {
-                searchResults.add(book);
+        // Search across all book variants
+        List<BookVariant> searchResults = new ArrayList<>();
+
+        for (BookVariant variant : allBookVariants) {
+            if (variant.getTitle().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)) ||
+                    (variant.getIsbn() != null && variant.getIsbn().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
+                    (variant.getDescription() != null && variant.getDescription().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
+                    (variant.getAuthors() != null && variant.getAuthors().stream().anyMatch(
+                            author -> author.getAuthorName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))))) {
+
+                searchResults.add(variant);
             }
         }
 
-        // Update search results RecyclerView
-        ExploreBookAdapter searchResultsAdapter = new ExploreBookAdapter(searchResults, this);
-        rvExploreSearchResults.setAdapter(searchResultsAdapter);
-        recyclerViewExploreBooks.setVisibility(View.GONE); // Hide main RecyclerView
-        rvExploreSearchResults.setVisibility(View.VISIBLE); // Show search results RecyclerView
+        searchResultsAdapter.updateBookVariants(searchResults);
     }
-
 
     @Override
-    public void onItemClick(Book book) {
+    public void onFilterApplied(Double minPrice, Double maxPrice, Integer authorId, Integer categoryId,
+                                Integer publisherId, String languageCode) {
+        // Update filter state
+        this.currentFilterMinPrice = minPrice;
+        this.currentFilterMaxPrice = maxPrice;
+        this.currentFilterAuthorId = authorId;
+        this.currentFilterCategoryId = categoryId;
+        this.currentFilterPublisherId = publisherId;
+
+        // Convert language code string to enum if provided
+        if (languageCode != null && !languageCode.isEmpty()) {
+            try {
+                this.currentFilterLanguage = LanguageCode.valueOf(languageCode);
+            } catch (IllegalArgumentException e) {
+                this.currentFilterLanguage = null;
+                Log.e(TAG, "Invalid language code: " + languageCode);
+            }
+        } else {
+            this.currentFilterLanguage = null;
+        }
+
+        // Apply filters
+        applyFilters();
+    }
+
+    private void applyFilters() {
+        // Start with all book variants
+        List<BookVariant> result = new ArrayList<>();
+
+        // Check each variant against the filters
+        for (BookVariant variant : allBookVariants) {
+            // Check if this variant matches all active filters
+            boolean variantMatches = true;
+
+            // Price range filter
+            if (currentFilterMinPrice != null && (variant.getPrice() == null ||
+                    variant.getPrice().compareTo(BigDecimal.valueOf(currentFilterMinPrice)) < 0)) {
+                variantMatches = false;
+            }
+
+            if (currentFilterMaxPrice != null && (variant.getPrice() == null ||
+                    variant.getPrice().compareTo(BigDecimal.valueOf(currentFilterMaxPrice)) > 0)) {
+                variantMatches = false;
+            }
+
+            // Author filter
+            if (currentFilterAuthorId != null && (variant.getAuthors() == null ||
+                    variant.getAuthors().stream().noneMatch(a -> a.getAuthorId() == currentFilterAuthorId))) {
+                variantMatches = false;
+            }
+
+            // Category filter
+            if (currentFilterCategoryId != null && variant.getCategoryId() != currentFilterCategoryId) {
+                variantMatches = false;
+            }
+
+            // Publisher filter
+            if (currentFilterPublisherId != null && variant.getPublisherId() != currentFilterPublisherId) {
+                variantMatches = false;
+            }
+
+            // Language filter
+            if (currentFilterLanguage != null && variant.getLanguage() != currentFilterLanguage) {
+                variantMatches = false;
+            }
+
+            if (variantMatches) {
+                result.add(variant);
+            }
+        }
+
+        // Update the filtered variants list and refresh the adapter
+        filteredBookVariants = result;
+        exploreBookAdapter.updateBookVariants(filteredBookVariants);
+
+        // Show count of results
+        showResultCount(filteredBookVariants.size());
+    }
+
+    private void showResultCount(int count) {
+        if (getView() != null) {
+            Snackbar.make(getView(), count + " books found", Snackbar.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onItemClick(BookVariant variant) {
+        // Navigate to book detail fragment
+        navigateToBookDetail(variant);
+    }
+
+    private void navigateToBookDetail(BookVariant variant) {
+        BookDetailFragment bookDetailFragment = BookDetailFragment.newInstance(String.valueOf(variant.getBookId()),
+                String.valueOf(variant.getVariantId()));
+
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+        fragmentTransaction.replace(R.id.frame_layout, bookDetailFragment);
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
+    }
+
+    private void showError(String message) {
         if (getContext() != null) {
-            Snackbar.make(requireView(), "Clicked on: " + book.getTitle(), Snackbar.LENGTH_SHORT).show();
-            // Implement navigation to book detail screen
+            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
         }
-    }
-
-    /**
-     * Generates dummy book items for demonstration purposes.
-     * Includes diverse authors and categories for filtering example.
-     * @return A list of dummy Book objects.
-     */
-    private List<Book> generateDummyBooks() {
-        List<Book> dummyBooks = new ArrayList<>();
-
-        // Create some dummy authors and publishers
-        Author mattHaig = new Author("Matt Haig");
-        Author colleenHoover = new Author("Colleen Hoover");
-        Author deliaOwens = new Author("Delia Owens");
-        Author stephenKing = new Author("Stephen King"); // Thriller
-        Author georgeOrwell = new Author("George Orwell"); // Fiction
-        Author janeAusten = new Author("Jane Austen"); // Fiction
-        Author harperLee = new Author("Harper Lee"); // Fiction
-        Author fScottFitzgerald = new Author("F. Scott Fitzgerald"); // Fiction
-        Author jamesClear = new Author("James Clear"); // Non-Fiction
-        Author taraWestover = new Author("Tara Westover"); // Non-Fiction
-        Author carlSagan = new Author("Carl Sagan"); // Science
-        Author stephenHawking = new Author("Stephen Hawking"); // Science
-        Author yuvalNoahHarari = new Author("Yuval Noah Harari"); // History
-        Author erikLarson = new Author("Erik Larson"); // History
-        Author jrrTolkien = new Author("J.R.R. Tolkien"); // Fantasy
-        Author brandonSanderson = new Author("Brandon Sanderson"); // Fantasy
-        Author alexMichaelides = new Author("Alex Michaelides"); // Thriller
-        Author helenHoang = new Author("Helen Hoang"); // Romance
-        Author caseyMcQuiston = new Author("Casey McQuiston"); // Romance
-        Author michelleObama = new Author("Michelle Obama"); // Biography
-        Author walterIsaacson = new Author("Walter Isaacson"); // Biography
-        Author robertCMartin = new Author("Robert C. Martin"); // Programming
-        Author martinFowler = new Author("Martin Fowler"); // Programming
-
-
-        Publisher publisher1 = new Publisher("Canongate Books");
-        Publisher publisher2 = new Publisher("Atria Books");
-        Publisher publisher3 = new Publisher("G.P. Putnam's Sons");
-        Publisher publisher4 = new Publisher("Scribner");
-        Publisher publisher5 = new Publisher("Secker & Warburg");
-        Publisher publisher6 = new Publisher("Thomas Egerton");
-
-
-        // Dummy Books with more varied data for filtering
-        dummyBooks.add(createBook(1, "The Midnight Library", new BigDecimal("15.99"), new HashSet<>(Arrays.asList(mattHaig)), publisher1)); // Fiction
-        dummyBooks.add(createBook(2, "It Ends with Us", new BigDecimal("12.50"), new HashSet<>(Arrays.asList(colleenHoover)), publisher2)); // Romance
-        dummyBooks.add(createBook(3, "Where the Crawdads Sing", new BigDecimal("14.00"), new HashSet<>(Arrays.asList(deliaOwens)), publisher3)); // Fiction
-        dummyBooks.add(createBook(4, "The Silent Patient", new BigDecimal("11.99"), new HashSet<>(Arrays.asList(alexMichaelides)), publisher4)); // Thriller
-        dummyBooks.add(createBook(5, "1984", new BigDecimal("9.99"), new HashSet<>(Arrays.asList(georgeOrwell)), publisher5)); // Fiction
-        dummyBooks.add(createBook(6, "Atomic Habits", new BigDecimal("17.50"), new HashSet<>(Arrays.asList(jamesClear)), publisher6)); // Non-Fiction
-        dummyBooks.add(createBook(7, "Educated", new BigDecimal("11.00"), new HashSet<>(Arrays.asList(taraWestover)), publisher1)); // Non-Fiction
-        dummyBooks.add(createBook(8, "Cosmos", new BigDecimal("22.00"), new HashSet<>(Arrays.asList(carlSagan)), publisher2)); // Science
-        dummyBooks.add(createBook(9, "A Brief History of Time", new BigDecimal("13.00"), new HashSet<>(Arrays.asList(stephenHawking)), publisher3)); // Science
-        dummyBooks.add(createBook(10, "Sapiens: A Brief History of Humankind", new BigDecimal("20.00"), new HashSet<>(Arrays.asList(yuvalNoahHarari)), publisher4)); // History
-        dummyBooks.add(createBook(11, "The Hobbit", new BigDecimal("10.99"), new HashSet<>(Arrays.asList(jrrTolkien)), publisher5)); // Fantasy
-        dummyBooks.add(createBook(12, "The Way of Kings", new BigDecimal("25.00"), new HashSet<>(Arrays.asList(brandonSanderson)), publisher6)); // Fantasy
-        dummyBooks.add(createBook(13, "The Guest List", new BigDecimal("10.00"), new HashSet<>(Arrays.asList(brandonSanderson)), publisher1)); // Thriller
-        dummyBooks.add(createBook(14, "Red, White & Royal Blue", new BigDecimal("13.00"), new HashSet<>(Arrays.asList(caseyMcQuiston)), publisher2)); // Romance
-        dummyBooks.add(createBook(15, "Becoming", new BigDecimal("19.00"), new HashSet<>(Arrays.asList(michelleObama)), publisher3)); // Biography
-        dummyBooks.add(createBook(16, "Steve Jobs", new BigDecimal("16.50"), new HashSet<>(Arrays.asList(walterIsaacson)), publisher4)); // Biography
-        dummyBooks.add(createBook(17, "Clean Code", new BigDecimal("35.00"), new HashSet<>(Arrays.asList(robertCMartin)), publisher5)); // Programming
-        dummyBooks.add(createBook(18, "Refactoring", new BigDecimal("32.00"), new HashSet<>(Arrays.asList(martinFowler)), publisher6)); // Programming
-        dummyBooks.add(createBook(19, "The Nightingale", new BigDecimal("14.00"), new HashSet<>(Arrays.asList(brandonSanderson)), publisher1)); // Fiction
-        dummyBooks.add(createBook(20, "Gone Girl", new BigDecimal("11.50"), new HashSet<>(Arrays.asList(brandonSanderson)), publisher2)); // Thriller
-
-
-        return dummyBooks;
-    }
-
-    // Helper method to create a Book instance with dummy data
-    private Book createBook(int id, String title, BigDecimal price, Set<Author> authors, Publisher publisher) {
-        Book book = new Book();
-        book.setBookId(id);
-        book.setTitle(title);
-        book.setPrice(price);
-        book.setAuthors(authors);
-        book.setPublisher(publisher);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            book.setCreatedAt(LocalDateTime.now());
-            book.setUpdatedAt(LocalDateTime.now());
-        }
-        List<BookImage> bookImages = new ArrayList<>();
-        BookImage bookImage = new BookImage();
-        bookImage.setBookImageId(id);
-        bookImage.setImageUrl("https://picsum.photos/200/300?random=" + id);
-        bookImages.add(bookImage);
-        book.setBookImages(bookImages);
-        book.setLanguage(LanguageCode.English);
-        book.setCategoryId(1); // Default category ID
-        book.setPublisherId(publisher.hashCode()); // Simple publisher ID
-        book.setPublicationYear(2023);
-        book.setIsbn("ISBN" + id);
-        return book;
     }
 }

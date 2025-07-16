@@ -8,31 +8,29 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.textview.MaterialTextView;
-import com.son.bookhaven.R; // Ensure R is correctly imported
-import com.son.bookhaven.data.model.Book;
+import com.son.bookhaven.R;
 import com.son.bookhaven.data.model.Author;
-// Assuming you have a utility for image loading like Glide or Picasso,
-// otherwise you'll need to manually set images or provide a placeholder.
-// import com.bumptech.glide.Glide; // Example if using Glide
+import com.son.bookhaven.data.model.BookImage;
+import com.son.bookhaven.data.model.BookVariant;
 
-import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 
 public class ExploreBookAdapter extends RecyclerView.Adapter<ExploreBookAdapter.ViewHolder> {
 
-    private List<Book> books;
+    private List<BookVariant> variants;
     private NumberFormat currencyFormatter;
     private OnItemClickListener listener;
 
     public interface OnItemClickListener {
-        void onItemClick(Book book);
+        void onItemClick(BookVariant variant);
     }
 
-    public ExploreBookAdapter(List<Book> books, OnItemClickListener listener) {
-        this.books = books;
+    public ExploreBookAdapter(List<BookVariant> variants, OnItemClickListener listener) {
+        this.variants = variants;
         this.listener = listener;
         this.currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US); // Or your desired locale
     }
@@ -47,51 +45,72 @@ public class ExploreBookAdapter extends RecyclerView.Adapter<ExploreBookAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Book book = books.get(position);
+        BookVariant variant = variants.get(position);
 
-        holder.textViewBookTitle.setText(book.getTitle());
-        holder.textViewBookPrice.setText(currencyFormatter.format(book.getPrice()));
+        // Safely set title
+        holder.textViewBookTitle.setText(variant.getTitle() != null ? variant.getTitle() : "Unknown Title");
 
-        // Get author names, handle multiple authors
-        String authorNames = "";
-        if (book.getAuthors() != null && !book.getAuthors().isEmpty()) {
+        // Safely format price
+        if (variant.getPrice() != null) {
+            holder.textViewBookPrice.setText(currencyFormatter.format(variant.getPrice()));
+        } else {
+            holder.textViewBookPrice.setText("N/A");
+        }
+
+        // Get author names, handle multiple authors with null checks
+        String authorNames = "Unknown Author";
+        if (variant.getAuthors() != null && !variant.getAuthors().isEmpty()) {
             StringBuilder sb = new StringBuilder();
-            for (Author author : book.getAuthors()) {
-                if (sb.length() > 0) {
-                    sb.append(", ");
+            for (Author author : variant.getAuthors()) {
+                if (author != null && author.getAuthorName() != null) {
+                    if (sb.length() > 0) {
+                        sb.append(", ");
+                    }
+                    sb.append(author.getAuthorName());
                 }
-                sb.append(author.getAuthorName()); // Assuming Author has getAuthorName()
             }
-            authorNames = sb.toString();
+            if (sb.length() > 0) {
+                authorNames = sb.toString();
+            }
         }
         holder.textViewBookAuthor.setText(authorNames);
 
-        // Load book cover image
-        // If you have a real image URL, use a library like Glide or Picasso here.
-        // For example, using Glide:
-        // if (book.getBookImages() != null && !book.getBookImages().isEmpty()) {
-        //     Glide.with(holder.imageViewBookCover.getContext())
-        //          .load(book.getBookImages().get(0).getImageUrl()) // Assuming first image is cover
-        //          .placeholder(R.drawable.placeholder_book) // Your placeholder drawable
-        //          .error(R.drawable.error_book) // Your error drawable
-        //          .into(holder.imageViewBookCover);
-        // } else {
-        //     holder.imageViewBookCover.setImageResource(R.drawable.placeholder_book);
-        // }
-        // For now, setting a static placeholder
-        holder.imageViewBookCover.setImageResource(R.drawable.ic_book_placeholder);
+        // Safely load book cover image
+        if (variant.getBookImages() != null && !variant.getBookImages().isEmpty()) {
+            BookImage bookImage = variant.getBookImages().stream()
+                    .filter(img -> img != null && img.getImageUrl() != null && !img.getImageUrl().isEmpty())
+                    .findFirst()
+                    .orElse(null);
 
+            if (bookImage != null && bookImage.getImageUrl() != null) {
+                // Use Glide to load the image
+                Glide.with(holder.imageViewBookCover.getContext())
+                        .load(bookImage.getImageUrl())
+                        .placeholder(R.drawable.ic_book_placeholder)
+                        .error(R.drawable.ic_book_placeholder)
+                        .into(holder.imageViewBookCover);
+            } else {
+                holder.imageViewBookCover.setImageResource(R.drawable.ic_book_placeholder);
+            }
+        } else {
+            holder.imageViewBookCover.setImageResource(R.drawable.ic_book_placeholder);
+        }
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
-                listener.onItemClick(book);
+                listener.onItemClick(variant);
             }
         });
     }
 
     @Override
     public int getItemCount() {
-        return books.size();
+        return variants.size();
+    }
+
+    public void updateBookVariants(List<BookVariant> newVariants) {
+        this.variants = newVariants;
+        notifyDataSetChanged();
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
