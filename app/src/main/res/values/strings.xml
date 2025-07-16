@@ -127,4 +127,6 @@
     <string name="sign_in">Sign in</string>
     <string name="not_logged_in_message">Sign in to manage your profile, orders, and settings.</string>
     <string name="profile_title">Profile</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
