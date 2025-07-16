@@ -2,6 +2,7 @@ package com.son.bookhaven.data.dto.response;
 
 import com.son.bookhaven.data.model.Book;
 import com.son.bookhaven.data.model.BookImage;
+import com.son.bookhaven.data.model.BookVariant;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -21,13 +22,13 @@ public class CartItemResponse implements Serializable {
     // Constructors
     public CartItemResponse() {}
 
-    public CartItemResponse(Book book, int quantity, boolean isChecked) {
-        this.bookId = book.getBookId();
-        this.title = book.getTitle();
-        this.price = book.getPrice();
+    public CartItemResponse(BookVariant variant, int quantity, boolean isChecked) {
+        this.bookId = variant.getBookId();
+        this.title = variant.getTitle();
+        this.price = variant.getPrice();
         this.quantity = quantity;
         this.isSelected = isChecked;
-        this.bookImages = book.getBookImages().stream()
+        this.bookImages = variant.getBookImages().stream()
                 .map(BookImage::getImageUrl)
                 .collect(Collectors.toList());
     }

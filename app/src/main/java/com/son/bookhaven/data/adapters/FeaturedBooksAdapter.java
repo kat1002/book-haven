@@ -9,33 +9,36 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textview.MaterialTextView;
 import com.son.bookhaven.R;
-import com.son.bookhaven.data.model.Book;
+import com.son.bookhaven.data.model.BookImage;
+import com.son.bookhaven.data.model.BookVariant;
 
 import java.util.List;
 
 public class FeaturedBooksAdapter extends RecyclerView.Adapter<FeaturedBooksAdapter.FeaturedBookViewHolder> {
 
-    private List<Book> books;
+    private List<BookVariant> bookVariants;
     private OnBookClickListener onBookClickListener;
 
     public interface OnBookClickListener {
-        void onBookClick(Book book);
-        void onAddToCartClick(Book book);
+        void onBookClick(BookVariant variant);
+
+        void onAddToCartClick(BookVariant variant);
     }
 
-    public FeaturedBooksAdapter(List<Book> books) {
-        this.books = books;
+    public FeaturedBooksAdapter(List<BookVariant> bookVariants) {
+        this.bookVariants = bookVariants;
     }
 
     public void setOnBookClickListener(OnBookClickListener listener) {
         this.onBookClickListener = listener;
     }
 
-    public void updateBooks(List<Book> newBooks) {
-        this.books = newBooks;
+    public void updateBookVariants(List<BookVariant> newBookVariants) {
+        this.bookVariants = newBookVariants;
         notifyDataSetChanged();
     }
 
@@ -49,13 +52,13 @@ public class FeaturedBooksAdapter extends RecyclerView.Adapter<FeaturedBooksAdap
 
     @Override
     public void onBindViewHolder(@NonNull FeaturedBookViewHolder holder, int position) {
-        Book book = books.get(position);
-        holder.bind(book);
+        BookVariant variant = bookVariants.get(position);
+        holder.bind(variant);
     }
 
     @Override
     public int getItemCount() {
-        return books != null ? books.size() : 0;
+        return bookVariants != null ? bookVariants.size() : 0;
     }
 
     class FeaturedBookViewHolder extends RecyclerView.ViewHolder {
@@ -77,47 +80,69 @@ public class FeaturedBooksAdapter extends RecyclerView.Adapter<FeaturedBooksAdap
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION && onBookClickListener != null) {
-                    onBookClickListener.onBookClick(books.get(position));
+                    onBookClickListener.onBookClick(bookVariants.get(position));
                 }
             });
 
             btnAddToCart.setOnClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION) {
-                    Book book = books.get(position);
+                    BookVariant variant = bookVariants.get(position);
                     if (onBookClickListener != null) {
-                        onBookClickListener.onAddToCartClick(book);
+                        onBookClickListener.onAddToCartClick(variant);
                     } else {
                         // Default behavior if no listener is set
                         Toast.makeText(v.getContext(),
-                                "Added " + book.getTitle() + " to cart",
+                                "Added " + variant.getTitle() + " to cart",
                                 Toast.LENGTH_SHORT).show();
                     }
                 }
             });
         }
 
-        public void bind(Book book) {
-            tvBookTitle.setText(book.getTitle());
-            tvAuthorName.setText(book.getAuthors().stream().findFirst().orElse(null).getAuthorName());
-            tvPrice.setText(book.getPrice().toString());
+        public void bind(BookVariant variant) {
+            tvBookTitle.setText(variant.getTitle());
 
-            // Load book cover image
-            // You can use Glide, Picasso, or any image loading library here
-            loadBookCover(book.getBookImages().stream().findFirst().orElse(null).getImageUrl());
+            // Safely get author name if available
+            if (variant.getAuthors() != null && !variant.getAuthors().isEmpty()) {
+                tvAuthorName.setText(variant.getAuthors().stream().findFirst().orElse(null).getAuthorName());
+            } else {
+                tvAuthorName.setText("Unknown Author");
+            }
+
+            // Safely display price if available
+            if (variant.getPrice() != null) {
+                tvPrice.setText(variant.getPrice().toString());
+            } else {
+                tvPrice.setText("N/A");
+            }
+
+            // Safely load book cover image
+            String imageUrl = null;
+            if (variant.getBookImages() != null && !variant.getBookImages().isEmpty()) {
+                BookImage bookImage = variant.getBookImages().stream().findFirst().orElse(null);
+                if (bookImage != null) {
+                    imageUrl = bookImage.getImageUrl();
+                }
+            }
+
+            loadBookCover(imageUrl);
         }
 
-        private void loadBookCover(String coverImage) {
-            // For now, set a placeholder. Replace with actual image loading logic
-            // Example with Glide:
-            // Glide.with(ivBookCover.getContext())
-            //     .load(coverImage)
-            //     .placeholder(R.drawable.book_placeholder)
-            //     .error(R.drawable.book_placeholder)
-            //     .into(ivBookCover);
-
+        private void loadBookCover(String coverImageUrl) {
             // For demonstration, set a placeholder
-            ivBookCover.setImageResource(R.drawable.ic_book_placeholder);
+//            ivBookCover.setImageResource(R.drawable.ic_book_placeholder);
+
+            // When you implement image loading, use this pattern:
+            if (coverImageUrl != null && !coverImageUrl.isEmpty()) {
+                Glide.with(ivBookCover.getContext())
+                        .load(coverImageUrl)
+                        .placeholder(R.drawable.ic_book_placeholder)
+                        .error(R.drawable.ic_book_placeholder)
+                        .into(ivBookCover);
+            } else {
+                ivBookCover.setImageResource(R.drawable.ic_book_placeholder);
+            }
         }
     }
 }

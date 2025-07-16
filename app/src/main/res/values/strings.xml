@@ -127,4 +127,21 @@
     <string name="sign_in">Sign in</string>
     <string name="not_logged_in_message">Sign in to manage your profile, orders, and settings.</string>
     <string name="profile_title">Profile</string>
+    <string name="filter_by_language">Filter by language</string>
+    <string name="filter_by_author">Filter by author</string>
+    <string name="select_author">Select author</string>
+    <string name="filter_by_publisher">Filter by publisher</string>
+    <string name="select_publisher">Select publisher</string>
+    <string name="variant">Variant:</string>
+    <string name="select_variant">Select variant</string>
+    <string name="unknown_author">Unknown Author</string>
+    <string name="price_not_available">Price not available</string>
+    <string name="no_description_available">No description available</string>
+    <string name="isbn_not_available">ISBN not available</string>
+    <string name="year_not_available">Publication year not available</string>
+    <string name="language_not_available">Language not available</string>
+    <string name="by_author">by %s</string>
+    <string name="isbn_format">ISBN: %s</string>
+    <string name="published_year">Published: %s</string>
+    <string name="language_format">Language: %s</string>
 </resources>
