@@ -222,6 +222,46 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Payment Method Section -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/textViewPaymentMethodTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Payment Method"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="16dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textInputLayoutNote"/>
+
+            <RadioGroup
+                android:id="@+id/radioGroupPaymentMethod"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textViewPaymentMethodTitle">
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/radioButtonPayOS"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Online Payment (PayOS)"
+                    android:checked="true"/>
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/radioButtonCOD"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cash on Delivery (COD)"/>
+            </RadioGroup>
+
+
 
             <!-- Cart Items Section -->
             <com.google.android.material.textview.MaterialTextView
@@ -235,7 +275,7 @@
                 android:layout_marginEnd="16dp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textInputLayoutNote"/>
+                app:layout_constraintTop_toBottomOf="@+id/radioGroupPaymentMethod"/>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerViewCartItems"

@@ -79,4 +79,5 @@ public class OrderResponse {
     @SerializedName("orderDetails")
     public List<OrderDetailResponse> orderDetails = new ArrayList<>();
 
-} 
+
+}

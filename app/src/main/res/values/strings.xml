@@ -144,4 +144,6 @@
     <string name="isbn_format">ISBN: %s</string>
     <string name="published_year">Published: %s</string>
     <string name="language_format">Language: %s</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

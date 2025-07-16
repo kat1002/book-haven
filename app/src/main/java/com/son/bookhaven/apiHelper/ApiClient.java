@@ -53,7 +53,7 @@ public class ApiClient {
                 Request newRequest = originalRequest.newBuilder()
                         .header("Authorization", "Bearer " + token)
                         .build();
-                Log.d("ApiClient", "Adding token to request: " + token);
+
                 return chain.proceed(newRequest);
             }
 

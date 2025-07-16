@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- App Bar with Material Toolbar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:title="Order Confirmation"
+            app:titleCentered="true"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="?attr/colorPrimary"/>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp">
+
+            <!-- Status Icon -->
+            <ImageView
+                android:id="@+id/imageViewStatus"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_marginTop="32dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:src="@drawable/ic_success"/>
+
+            <!-- Status Title -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/textViewStatusTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Order Completed"
+                android:textAppearance="?attr/textAppearanceHeadlineMedium"
+                android:textAlignment="center"
+                app:layout_constraintTop_toBottomOf="@+id/imageViewStatus"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+
+            <!-- Status Message -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/textViewStatusMessage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Thank you for your order. Your payment was successful."
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textAlignment="center"
+                app:layout_constraintTop_toBottomOf="@+id/textViewStatusTitle"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+
+            <!-- Order Details Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardViewOrderDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:contentPadding="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/textViewStatusMessage"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Order Details"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"/>
+
+                    <!-- Order ID -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="16dp">
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Order ID:"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/textViewOrderId"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="#12345"
+                            android:textStyle="bold"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                    </LinearLayout>
+
+                    <!-- Order Date -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Date:"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/textViewOrderDate"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="May 14, 2023"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                    </LinearLayout>
+
+                    <!-- Payment Method -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Payment Method:"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/textViewPaymentMethod"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="PayOS"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                    </LinearLayout>
+
+                    <!-- Payment Status -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Payment Status:"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/textViewPaymentStatus"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Completed"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                    </LinearLayout>
+
+                    <!-- Total Amount -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Total Amount:"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+
+                        <com.google.android.material.textview.MaterialTextView
+                            android:id="@+id/textViewTotalAmount"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="$125.00"
+                            android:textStyle="bold"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action Buttons -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonViewOrderHistory"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="View Order History"
+                app:layout_constraintTop_toBottomOf="@+id/cardViewOrderDetails"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonContinueShopping"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Continue Shopping"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:layout_constraintTop_toBottomOf="@+id/buttonViewOrderHistory"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Loading Overlay -->
+    <FrameLayout
+        android:id="@+id/loadingOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"/>
+    </FrameLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
