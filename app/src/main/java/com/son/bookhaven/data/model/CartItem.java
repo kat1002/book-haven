@@ -23,12 +23,15 @@ public class CartItem {
         this.quantity = quantity;
         this.isChecked = isChecked;
     }
+
     public boolean isChecked() {
         return isChecked;
     }
+
     public void setChecked(boolean checked) {
         isChecked = checked;
     }
+
     public BigDecimal getTotalPrice() {
         BigDecimal bigQuantity = BigDecimal.valueOf(quantity);
         return variant.getPrice().multiply(bigQuantity);

@@ -1,21 +1,21 @@
 package com.son.bookhaven.apiHelper;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.son.bookhaven.authService.TokenManager;
+
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 
 public class ApiClient {
     private static Retrofit retrofit = null;
@@ -88,10 +88,12 @@ public class ApiClient {
     private static X509TrustManager getUnsafeTrustManager() {
         return new X509TrustManager() {
             @Override
-            public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+            public void checkClientTrusted(X509Certificate[] chain, String authType) {
+            }
 
             @Override
-            public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+            public void checkServerTrusted(X509Certificate[] chain, String authType) {
+            }
 
             @Override
             public X509Certificate[] getAcceptedIssuers() {

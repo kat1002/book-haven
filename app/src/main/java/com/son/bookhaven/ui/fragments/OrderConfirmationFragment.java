@@ -10,8 +10,6 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -37,7 +35,7 @@ public class OrderConfirmationFragment extends Fragment {
 
     private static final String TAG = "OrderConfirmationFrag";
     private static final int STATUS_PendingPayment = 0;
-    private static final int STATUS_Delivering= 1;
+    private static final int STATUS_Delivering = 1;
     private static final int STATUS_SDelivered = 2;
     private static final int STATUS_CANCELLED = 3;
     public static final int PAYMENT_PAYOS = 0;
@@ -135,7 +133,7 @@ public class OrderConfirmationFragment extends Fragment {
         textViewOrderId.setText("#" + orderId);
         textViewOrderDate.setText(orderDate);
         textViewPaymentMethod.setText(paymentMethod == PAYMENT_PAYOS ? "PayOS Online" : "Cash on Delivery");
-        textViewTotalAmount.setText(String.format(new Locale("vi", "VN"), "%,d đ", (int)totalAmount));
+        textViewTotalAmount.setText(String.format(new Locale("vi", "VN"), "%,d đ", (int) totalAmount));
 
         // Set initial UI based on payment method and status
         if (paymentMethod == PAYMENT_PAYOS) {

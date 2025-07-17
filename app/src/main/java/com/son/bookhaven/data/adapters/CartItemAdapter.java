@@ -3,16 +3,13 @@ package com.son.bookhaven.data.adapters; // Adjust package as necessary
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-// Removed ImageView import as it's no longer used
-// import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.textview.MaterialTextView;
-import com.son.bookhaven.R; // Assuming R is generated for your project, adjust if needed
+import com.son.bookhaven.R;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
-import com.son.bookhaven.data.model.CartItem;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;

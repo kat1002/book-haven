@@ -1,11 +1,13 @@
 package com.son.bookhaven.ui.fragments;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,21 +19,36 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.AuthorApiService;
+import com.son.bookhaven.apiHelper.CategoryApiService;
+import com.son.bookhaven.apiHelper.PublisherApiService;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.response.AuthorResponse;
+import com.son.bookhaven.data.dto.response.CategoryResponse;
+import com.son.bookhaven.data.dto.response.PublisherResponse;
+import com.son.bookhaven.data.model.LanguageCode;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.Setter;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
+
+    private static final String TAG = "FilterBottomSheet";
 
     public interface FilterApplyListener {
         void onFilterApplied(Double minPrice, Double maxPrice, Integer authorId,
                              Integer categoryId, Integer publisherId, String language);
     }
 
+    @Setter
     private FilterApplyListener filterApplyListener;
 
     private ChipGroup chipGroupCategories;
@@ -44,6 +61,7 @@ public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
     private TextInputLayout textInputLayoutMaxPrice;
     private MaterialButton buttonClearFilters;
     private MaterialButton buttonApplyFilters;
+    private ProgressBar progressBar;
 
     // Current filter values
     private Integer selectedCategoryId;
@@ -58,14 +76,18 @@ public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
     private Map<String, Integer> publisherMap = new HashMap<>();
     private Map<String, Integer> categoryMap = new HashMap<>();
 
-    public void setFilterApplyListener(FilterApplyListener listener) {
-        this.filterApplyListener = listener;
-    }
+    private CategoryApiService categoryApiService;
+    private AuthorApiService authorApiService;
+    private PublisherApiService publisherApiService;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_filter_options, container, false);
+
+        categoryApiService = ApiClient.getClient().create(CategoryApiService.class);
+        authorApiService = ApiClient.getClient().create(AuthorApiService.class);
+        publisherApiService = ApiClient.getClient().create(PublisherApiService.class);
 
         chipGroupCategories = view.findViewById(R.id.chipGroupCategories);
         chipGroupLanguages = view.findViewById(R.id.chipGroupLanguages);
@@ -84,27 +106,92 @@ public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        showLoading(true);
 
-        // Populate filters
-        populateCategories();
+        // Fetch data and populate filters
+        fetchCategories();
         populateLanguages();
-        populateAuthors();
-        populatePublishers();
+        fetchAuthors();
+        fetchPublishers();
 
         // Set click listeners
         buttonClearFilters.setOnClickListener(v -> clearFilters());
         buttonApplyFilters.setOnClickListener(v -> applyFilters());
     }
 
-    private void populateCategories() {
+    private void showLoading(boolean isLoading) {
+        if (progressBar != null) {
+            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void fetchCategories() {
         if (chipGroupCategories == null) return;
+
+        categoryApiService.getAllCategories().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<CategoryResponse>>> call, Response<ApiResponse<List<CategoryResponse>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<CategoryResponse> categories = response.body().getData();
+                    populateCategoriesChips(categories);
+                } else {
+                    Log.e(TAG, "Failed to fetch categories: " + response.message());
+                    // Fallback to sample data
+                    populateSampleCategories();
+                }
+                checkAllDataLoaded();
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<List<CategoryResponse>>> call, Throwable t) {
+                Log.e(TAG, "Error fetching categories", t);
+                // Fallback to sample data
+                populateSampleCategories();
+                checkAllDataLoaded();
+            }
+        });
+    }
+
+    private void populateCategoriesChips(List<CategoryResponse> categories) {
+        if (chipGroupCategories == null || !isAdded()) return;
 
         // Clear existing chips
         chipGroupCategories.removeAllViews();
-
-        // Sample categories - in a real app, these would come from an API
-        String[] categories = {"Fiction", "Non-Fiction", "Biography", "Science", "History", "Technology", "Children"};
         categoryMap.clear();
+
+        for (CategoryResponse category : categories) {
+            categoryMap.put(category.getCategoryName(), category.getCategoryId());
+
+            Chip chip = new Chip(requireContext());
+            chip.setText(category.getCategoryName());
+            chip.setCheckable(true);
+            chip.setClickable(true);
+
+            // If this is the currently selected category, check it
+            if (selectedCategoryId != null && selectedCategoryId.equals(category.getCategoryId())) {
+                chip.setChecked(true);
+            }
+
+            chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    selectedCategoryId = category.getCategoryId();
+                } else if (selectedCategoryId != null && selectedCategoryId.equals(category.getCategoryId())) {
+                    selectedCategoryId = null;
+                }
+            });
+
+            chipGroupCategories.addView(chip);
+        }
+    }
+
+    private void populateSampleCategories() {
+        if (chipGroupCategories == null || !isAdded()) return;
+
+        // Clear existing chips
+        chipGroupCategories.removeAllViews();
+        categoryMap.clear();
+
+        String[] categories = {"Fiction", "Non-Fiction", "Biography", "Science", "History", "Technology", "Children"};
 
         for (int i = 0; i < categories.length; i++) {
             String category = categories[i];
@@ -116,8 +203,8 @@ public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
             chip.setCheckable(true);
             chip.setClickable(true);
 
-            // If this is the currently selected category, check it
-            if (categoryId == selectedCategoryId) {
+            // Add null check here to prevent NullPointerException
+            if (selectedCategoryId != null && categoryId == selectedCategoryId) {
                 chip.setChecked(true);
             }
 
@@ -139,36 +226,102 @@ public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
         // Clear existing chips
         chipGroupLanguages.removeAllViews();
 
-        // Sample languages - in a real app, these would come from an API or enum
-        String[] languages = {"English", "Spanish", "French", "German", "Chinese", "Japanese"};
+        // Get language values from the LanguageCode enum
+        LanguageCode[] languageCodes = LanguageCode.values();
 
-        for (String language : languages) {
+        for (LanguageCode languageCode : languageCodes) {
             Chip chip = new Chip(requireContext());
-            chip.setText(language);
+            chip.setText(languageCode.name());
             chip.setCheckable(true);
             chip.setClickable(true);
 
             // If this is the currently selected language, check it
-            if (language.equals(selectedLanguage)) {
+            if (languageCode.name().equals(selectedLanguage)) {
                 chip.setChecked(true);
             }
 
             chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isChecked) {
-                    selectedLanguage = language;
-                } else if (language.equals(selectedLanguage)) {
+                    selectedLanguage = languageCode.name();
+                } else if (languageCode.name().equals(selectedLanguage)) {
                     selectedLanguage = null;
                 }
             });
 
             chipGroupLanguages.addView(chip);
         }
+
+        checkAllDataLoaded();
     }
 
-    private void populateAuthors() {
-        if (dropdownAuthors == null) return;
+    private void fetchAuthors() {
+        authorApiService.getAllAuthors().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<AuthorResponse>>> call, Response<ApiResponse<List<AuthorResponse>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<AuthorResponse> authors = response.body().getData();
+                    populateAuthorsDropdown(authors);
+                } else {
+                    Log.e(TAG, "Failed to fetch authors: " + response.message());
+                    // Fallback to sample data
+                    populateSampleAuthors();
+                }
+                checkAllDataLoaded();
+            }
 
-        // Sample authors - in a real app, these would come from an API
+            @Override
+            public void onFailure(Call<ApiResponse<List<AuthorResponse>>> call, Throwable t) {
+                Log.e(TAG, "Error fetching authors", t);
+                // Fallback to sample data
+                populateSampleAuthors();
+                checkAllDataLoaded();
+            }
+        });
+    }
+
+    private void populateAuthorsDropdown(List<AuthorResponse> authors) {
+        if (dropdownAuthors == null || !isAdded()) return;
+
+        List<String> authorNames = new ArrayList<>();
+        authorNames.add("All Authors");
+        authorMap.clear();
+
+        for (AuthorResponse author : authors) {
+            authorNames.add(author.getAuthorName());
+            authorMap.put(author.getAuthorName(), author.getAuthorId());
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                requireContext(),
+                R.layout.dropdown_item,
+                authorNames
+        );
+
+        dropdownAuthors.setAdapter(adapter);
+        dropdownAuthors.setOnItemClickListener((parent, view, position, id) -> {
+            if (position == 0) { // "All Authors"
+                selectedAuthorId = null;
+            } else {
+                selectedAuthorId = authorMap.get(authorNames.get(position));
+            }
+        });
+
+        // Set initial selection
+        if (selectedAuthorId != null) {
+            for (Map.Entry<String, Integer> entry : authorMap.entrySet()) {
+                if (entry.getValue().equals(selectedAuthorId)) {
+                    dropdownAuthors.setText(entry.getKey(), false);
+                    break;
+                }
+            }
+        } else {
+            dropdownAuthors.setText(authorNames.get(0), false);
+        }
+    }
+
+    private void populateSampleAuthors() {
+        if (dropdownAuthors == null || !isAdded()) return;
+
         String[] authors = {"All Authors", "Sarah Johnson", "Alex Chen", "Maria Rodriguez", "David Kim",
                 "Michael Blake", "Lisa Wong", "Emma Thompson", "Roberto Martinez"};
         authorMap.clear();
@@ -208,10 +361,74 @@ public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
         }
     }
 
-    private void populatePublishers() {
-        if (dropdownPublishers == null) return;
+    private void fetchPublishers() {
+        publisherApiService.getAllPublishers().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<PublisherResponse>>> call, Response<ApiResponse<List<PublisherResponse>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<PublisherResponse> publishers = response.body().getData();
+                    populatePublishersDropdown(publishers);
+                } else {
+                    Log.e(TAG, "Failed to fetch publishers: " + response.message());
+                    // Fallback to sample data
+                    populateSamplePublishers();
+                }
+                checkAllDataLoaded();
+            }
 
-        // Sample publishers - in a real app, these would come from an API
+            @Override
+            public void onFailure(Call<ApiResponse<List<PublisherResponse>>> call, Throwable t) {
+                Log.e(TAG, "Error fetching publishers", t);
+                // Fallback to sample data
+                populateSamplePublishers();
+                checkAllDataLoaded();
+            }
+        });
+    }
+
+    private void populatePublishersDropdown(List<PublisherResponse> publishers) {
+        if (dropdownPublishers == null || !isAdded()) return;
+
+        List<String> publisherNames = new ArrayList<>();
+        publisherNames.add("All Publishers");
+        publisherMap.clear();
+
+        for (PublisherResponse publisher : publishers) {
+            publisherNames.add(publisher.getPublisherName());
+            publisherMap.put(publisher.getPublisherName(), publisher.getPublisherId());
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                requireContext(),
+                R.layout.dropdown_item,
+                publisherNames
+        );
+
+        dropdownPublishers.setAdapter(adapter);
+        dropdownPublishers.setOnItemClickListener((parent, view, position, id) -> {
+            if (position == 0) { // "All Publishers"
+                selectedPublisherId = null;
+            } else {
+                selectedPublisherId = publisherMap.get(publisherNames.get(position));
+            }
+        });
+
+        // Set initial selection
+        if (selectedPublisherId != null) {
+            for (Map.Entry<String, Integer> entry : publisherMap.entrySet()) {
+                if (entry.getValue().equals(selectedPublisherId)) {
+                    dropdownPublishers.setText(entry.getKey(), false);
+                    break;
+                }
+            }
+        } else {
+            dropdownPublishers.setText(publisherNames.get(0), false);
+        }
+    }
+
+    private void populateSamplePublishers() {
+        if (dropdownPublishers == null || !isAdded()) return;
+
         String[] publishers = {"All Publishers", "Random House", "Penguin Books", "HarperCollins",
                 "Simon & Schuster", "Macmillan", "Hachette Book Group"};
         publisherMap.clear();
@@ -248,6 +465,18 @@ public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
             }
         } else {
             dropdownPublishers.setText(publishers[0], false);
+        }
+    }
+
+    private void checkAllDataLoaded() {
+        // Simple counter to track API calls completion
+        // In a more complex app, you might use a more sophisticated approach
+        if (chipGroupCategories != null && chipGroupCategories.getChildCount() > 0 &&
+                chipGroupLanguages != null && chipGroupLanguages.getChildCount() > 0 &&
+                dropdownAuthors != null && dropdownAuthors.getAdapter() != null &&
+                dropdownPublishers != null && dropdownPublishers.getAdapter() != null) {
+
+            showLoading(false);
         }
     }
 

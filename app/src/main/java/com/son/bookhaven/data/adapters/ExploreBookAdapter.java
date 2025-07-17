@@ -22,7 +22,7 @@ import java.util.Locale;
 public class ExploreBookAdapter extends RecyclerView.Adapter<ExploreBookAdapter.ViewHolder> {
 
     private List<BookVariant> variants;
-    private NumberFormat currencyFormatter;
+    private final NumberFormat currencyFormatter;
     private OnItemClickListener listener;
 
     public interface OnItemClickListener {
@@ -32,7 +32,8 @@ public class ExploreBookAdapter extends RecyclerView.Adapter<ExploreBookAdapter.
     public ExploreBookAdapter(List<BookVariant> variants, OnItemClickListener listener) {
         this.variants = variants;
         this.listener = listener;
-        this.currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US); // Or your desired locale
+        this.currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN")); // Or your desired locale
+        currencyFormatter.setGroupingUsed(true);
     }
 
     @NonNull

@@ -151,6 +151,7 @@ public class PaymentActivity extends AppCompatActivity {
                 })
                 .show();
     }
+
     private void fetchOrderDetailsAndComplete(int orderId, String paymentCode, boolean isSuccess) {
         Log.d("PaymentActivity", "Fetching order details for orderId: " + orderId);
         progressBar.setVisibility(View.VISIBLE);

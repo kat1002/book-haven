@@ -1,5 +1,6 @@
 package com.son.bookhaven.ui.fragments;
 
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,26 +14,29 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.search.SearchBar;
 import com.google.android.material.search.SearchView;
+import com.google.android.material.snackbar.Snackbar;
+import com.son.bookhaven.MainActivity;
 import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.BookApiService;
 import com.son.bookhaven.apiHelper.BookVariantApiService;
+import com.son.bookhaven.apiHelper.CartApiService;
 import com.son.bookhaven.apiHelper.CategoryApiService;
 import com.son.bookhaven.data.adapters.CategoryAdapter;
 import com.son.bookhaven.data.adapters.FeaturedBooksAdapter;
 import com.son.bookhaven.data.adapters.NewArrivalsAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.request.CartItemUpdateRequest;
 import com.son.bookhaven.data.dto.response.BookVariantResponse;
 import com.son.bookhaven.data.dto.response.CategoryResponse;
+import com.son.bookhaven.data.model.Author;
 import com.son.bookhaven.data.model.BookVariant;
 import com.son.bookhaven.data.model.LanguageCode;
-import com.son.bookhaven.data.model.Author;
 import com.son.bookhaven.data.model.Publisher;
 
 import java.math.BigDecimal;
@@ -58,7 +62,6 @@ public class HomeFragment extends Fragment {
     private FeaturedBooksAdapter featuredBooksAdapter;
     private NewArrivalsAdapter newArrivalsAdapter;
     private NewArrivalsAdapter searchResultsAdapter;
-    private MaterialButton btnCart;
     private SearchBar searchBar;
     private SearchView searchView;
 
@@ -67,7 +70,6 @@ public class HomeFragment extends Fragment {
     // Store only lowest price variants
     private List<BookVariant> lowestPriceVariants = new ArrayList<>();
 
-    private BookApiService bookApiService;
     private BookVariantApiService bookVariantApiService;
 
     private RecyclerView rvCategories;
@@ -79,14 +81,11 @@ public class HomeFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        // Initialize API services
-        bookApiService = ApiClient.getClient().create(BookApiService.class);
         bookVariantApiService = ApiClient.getClient().create(BookVariantApiService.class);
         categoryApiService = ApiClient.getClient().create(CategoryApiService.class);
 
         initViews(view);
         setupRecyclerViews();
-        setupClickListeners();
         setupSearchBarAndSearchView();
 
         // Load book variants from the API
@@ -96,11 +95,46 @@ public class HomeFragment extends Fragment {
         return view;
     }
 
+    private void addToCart(BookVariant variant) {
+        // Show loading indicator if needed
+        CartApiService cartApiService = ApiClient.getAuthenticatedClient(requireContext()).create(CartApiService.class);
+
+        CartItemUpdateRequest request = new CartItemUpdateRequest(
+                variant.getVariantId(),
+                1  // Adding 1 item to cart
+        );
+
+        cartApiService.updateCartItemQuantity(request).enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+                    // Show success message
+                    Snackbar.make(getView(), "Added " + variant.getTitle() + " to cart", Snackbar.LENGTH_SHORT).show();
+
+                    // Update the cart badge in MainActivity
+                    if (getActivity() instanceof MainActivity) {
+                        ((MainActivity) getActivity()).updateCartBadge(0); // This will trigger a refresh
+                    }
+                } else {
+                    // Show error message
+                    Snackbar.make(getView(), "Failed to add item to cart", Snackbar.LENGTH_SHORT).show();
+                    Log.e(TAG, "Failed to add to cart. Response code: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                // Show network error
+                Snackbar.make(getView(), "Network error. Please try again.", Snackbar.LENGTH_SHORT).show();
+                Log.e(TAG, "Error adding to cart: " + t.getMessage());
+            }
+        });
+    }
+
     private void initViews(View view) {
         rvCategories = view.findViewById(R.id.rv_categories);
         rvFeaturedBooks = view.findViewById(R.id.rv_featured_books);
         rvNewArrivals = view.findViewById(R.id.rv_new_arrivals);
-        btnCart = view.findViewById(R.id.btn_cart);
         searchBar = view.findViewById(R.id.search_bar);
         searchView = view.findViewById(R.id.search_view);
         rvSearchResults = view.findViewById(R.id.rv_search_results);
@@ -116,10 +150,8 @@ public class HomeFragment extends Fragment {
     private void setupCategoriesRecyclerView() {
         rvCategories.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         categoryAdapter = new CategoryAdapter(new ArrayList<>());
-        categoryAdapter.setOnCategoryClickListener(category -> {
-            // Navigate to category detail showing all book variants in this category
-            navigateToCategoryBooks(category);
-        });
+        // Navigate to category detail showing all book variants in this category
+        categoryAdapter.setOnCategoryClickListener(this::navigateToCategoryBooks);
         rvCategories.setAdapter(categoryAdapter);
     }
 
@@ -135,15 +167,14 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void onAddToCartClick(BookVariant variant) {
-                Toast.makeText(getContext(), "Added " + variant.getTitle() + " to cart", Toast.LENGTH_SHORT).show();
-                // Add to cart logic
+                addToCart(variant);
             }
         });
         rvFeaturedBooks.setAdapter(featuredBooksAdapter);
     }
 
     private void setupNewArrivalsRecyclerView() {
-        rvNewArrivals.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvNewArrivals.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         newArrivalsAdapter = new NewArrivalsAdapter(new ArrayList<>());
         newArrivalsAdapter.setOnBookClickListener(new NewArrivalsAdapter.OnBookClickListener() {
             @Override
@@ -154,15 +185,21 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void onAddToCartClick(BookVariant variant) {
-                Toast.makeText(getContext(), "Added " + variant.getTitle() + " to cart", Toast.LENGTH_SHORT).show();
-                // Add to cart logic
+                addToCart(variant);
             }
         });
         rvNewArrivals.setAdapter(newArrivalsAdapter);
     }
 
     private void setupSearchResultsRecyclerView() {
-        rvSearchResults.setLayoutManager(new LinearLayoutManager(getContext()));
+        // Use GridLayoutManager with 2 columns
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(getContext(), 2);
+        rvSearchResults.setLayoutManager(gridLayoutManager);
+
+        // Add item decoration for spacing
+        int spacingInPixels = getResources().getDimensionPixelSize(R.dimen.search_item_spacing);
+        rvSearchResults.addItemDecoration(new GridSpacingItemDecoration(2, spacingInPixels, true));
+
         searchResultsAdapter = new NewArrivalsAdapter(new ArrayList<>());
         searchResultsAdapter.setOnBookClickListener(new NewArrivalsAdapter.OnBookClickListener() {
             @Override
@@ -175,17 +212,12 @@ public class HomeFragment extends Fragment {
             @Override
             public void onAddToCartClick(BookVariant variant) {
                 Toast.makeText(getContext(), "Added " + variant.getTitle() + " to cart from search", Toast.LENGTH_SHORT).show();
-                // Add to cart logic
+                addToCart(variant);
             }
         });
+        rvSearchResults.setPadding(16, 16, 16, 16);
+        rvSearchResults.setClipToPadding(false);
         rvSearchResults.setAdapter(searchResultsAdapter);
-    }
-
-    private void setupClickListeners() {
-        btnCart.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Cart clicked", Toast.LENGTH_SHORT).show();
-            // Navigate to cart fragment
-        });
     }
 
     private void setupSearchBarAndSearchView() {
@@ -224,11 +256,10 @@ public class HomeFragment extends Fragment {
             return false;
         });
 
-        if (searchView.getToolbar() != null) {
-            searchView.getToolbar().setNavigationOnClickListener(v -> {
-                searchView.hide();
-            });
-        }
+        searchView.getToolbar();
+        searchView.getToolbar().setNavigationOnClickListener(v -> {
+            searchView.hide();
+        });
     }
 
     private void performSearch(String query) {
@@ -239,13 +270,13 @@ public class HomeFragment extends Fragment {
 
         // Search across all book variants
         List<BookVariant> searchResults = allBookVariants.stream()
-            .filter(variant ->
-                variant.getTitle().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)) ||
-                (variant.getIsbn() != null && variant.getIsbn().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
-                (variant.getDescription() != null && variant.getDescription().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
-                (variant.getAuthors() != null && variant.getAuthors().stream().anyMatch(
-                        author -> author.getAuthorName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)))))
-            .collect(Collectors.toList());
+                .filter(variant ->
+                        variant.getTitle().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)) ||
+                                (variant.getIsbn() != null && variant.getIsbn().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
+                                (variant.getDescription() != null && variant.getDescription().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
+                                (variant.getAuthors() != null && variant.getAuthors().stream().anyMatch(
+                                        author -> author.getAuthorName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)))))
+                .collect(Collectors.toList());
 
         searchResultsAdapter.updateBookVariants(searchResults);
     }
@@ -321,22 +352,44 @@ public class HomeFragment extends Fragment {
     }
 
     private void navigateToCategoryBooks(CategoryResponse category) {
-        // Create a new fragment to display books by category
-        CategoryBooksFragment categoryBooksFragment = CategoryBooksFragment.newInstance(
-                category.getCategoryId(), category.getCategoryName());
+        // Check if the selected category has any books
+        boolean hasBooksInCategory = false;
 
-        // Get the FragmentManager and start a transaction
-        FragmentManager fragmentManager = getParentFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        if (allBookVariants != null && !allBookVariants.isEmpty()) {
+            for (BookVariant variant : allBookVariants) {
+                if (variant.getCategoryId() == category.getCategoryId()) {
+                    hasBooksInCategory = true;
+                    break;
+                }
+            }
+        }
 
-        // Replace the current fragment with CategoryBooksFragment
-        fragmentTransaction.replace(R.id.frame_layout, categoryBooksFragment);
+        if (hasBooksInCategory) {
+            // Create a new fragment to display books by category
+            CategoryBooksFragment categoryBooksFragment = CategoryBooksFragment.newInstance(
+                    category.getCategoryId(), category.getCategoryName());
 
-        // Add the transaction to the back stack so the user can navigate back
-        fragmentTransaction.addToBackStack(null);
+            // Get the FragmentManager and start a transaction
+            FragmentManager fragmentManager = getParentFragmentManager();
+            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 
-        // Commit the transaction
-        fragmentTransaction.commit();
+            // Replace the current fragment with CategoryBooksFragment
+            fragmentTransaction.replace(R.id.frame_layout, categoryBooksFragment);
+
+            // Add the transaction to the back stack so the user can navigate back
+            fragmentTransaction.addToBackStack(null);
+
+            // Commit the transaction
+            fragmentTransaction.commit();
+        } else {
+            // Show a Snackbar informing user that this category has no books
+            View rootView = getView();
+            if (rootView != null) {
+                Snackbar.make(rootView,
+                        "The category \"" + category.getCategoryName() + "\" has no books available.",
+                        Snackbar.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void loadBookVariantsFromApi() {
@@ -402,8 +455,8 @@ public class HomeFragment extends Fragment {
             variant.setIsbn(response.getIsbn());
             variant.setPrice(response.getPrice());
             variant.setStock(response.getStock());
-            variant.setCategoryId(response.getCategoryId());
-            variant.setPublisherId(response.getPublisherId());
+            variant.setCategoryId(response.getCategory().getCategoryId());
+            variant.setPublisherId(response.getPublisher().getPublisherId());
             variant.setPublicationYear(response.getPublicationYear());
 
             // Convert language code string to enum
@@ -418,11 +471,26 @@ public class HomeFragment extends Fragment {
             // Set created/updated dates
             if (response.getCreatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
+                    // Try ISO_DATE_TIME format first
                     DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
                     variant.setCreatedAt(LocalDateTime.parse(response.getCreatedAt(), formatter));
                 } catch (Exception e) {
-                    Log.e(TAG, "Date parsing error", e);
+                    try {
+                        // If that fails, try a more flexible pattern that matches your API response
+                        DateTimeFormatter alternateFormatter =
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSS][XXX]");
+                        variant.setCreatedAt(LocalDateTime.parse(response.getCreatedAt(), alternateFormatter));
+                    } catch (Exception e2) {
+                        // If all parsing fails, set a default date (now)
+                        Log.e(TAG, "Date parsing error: " + response.getCreatedAt(), e2);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            variant.setCreatedAt(LocalDateTime.now());
+                        }
+                    }
                 }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // If createdAt is null or empty, set current time
+                variant.setCreatedAt(LocalDateTime.now());
             }
 
             if (response.getUpdatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -616,6 +684,40 @@ public class HomeFragment extends Fragment {
             int maxNew = Math.min(newVariants.size(), 10);
             List<BookVariant> recentVariants = newVariants.subList(0, maxNew);
             newArrivalsAdapter.updateBookVariants(recentVariants);
+        }
+    }
+
+    public static class GridSpacingItemDecoration extends RecyclerView.ItemDecoration {
+        private int spanCount;
+        private int spacing;
+        private boolean includeEdge;
+
+        public GridSpacingItemDecoration(int spanCount, int spacing, boolean includeEdge) {
+            this.spanCount = spanCount;
+            this.spacing = spacing;
+            this.includeEdge = includeEdge;
+        }
+
+        @Override
+        public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
+            int position = parent.getChildAdapterPosition(view); // item position
+            int column = position % spanCount; // item column
+
+            if (includeEdge) {
+                outRect.left = spacing - column * spacing / spanCount; // spacing - column * ((1f / spanCount) * spacing)
+                outRect.right = (column + 1) * spacing / spanCount; // (column + 1) * ((1f / spanCount) * spacing)
+
+                if (position < spanCount) { // top edge
+                    outRect.top = spacing;
+                }
+                outRect.bottom = spacing; // item bottom
+            } else {
+                outRect.left = column * spacing / spanCount; // column * ((1f / spanCount) * spacing)
+                outRect.right = spacing - (column + 1) * spacing / spanCount; // spacing - (column + 1) * ((1f /    spanCount) * spacing)
+                if (position >= spanCount) {
+                    outRect.top = spacing; // item top
+                }
+            }
         }
     }
 }

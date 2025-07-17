@@ -1,40 +1,27 @@
 package com.son.bookhaven.ui.fragments;
 
-import android.Manifest;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-// Make sure to import ImageView for ivEditProfilePicture
 import android.widget.Toast;
 
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.gson.Gson;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-
-import com.son.bookhaven.R;
+import com.google.gson.Gson;
 import com.pranathicodes.letteravatar.AvatarCreator;
+import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.AccountApiService;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.authService.TokenManager;
@@ -46,12 +33,6 @@ import com.son.bookhaven.data.model.User;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-
-import java.io.File;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 public class EditProfileFragment extends Fragment {
 
@@ -113,7 +94,7 @@ public class EditProfileFragment extends Fragment {
         btnSaveChanges = view.findViewById(R.id.btn_save_changes);
         btnCancel = view.findViewById(R.id.btn_cancel);
         btnChangePassword = view.findViewById(R.id.btn_change_password);
-        
+
         // Initialize API service and TokenManager
         accountApiService = ApiClient.getAuthenticatedClient(requireContext()).create(AccountApiService.class);
         tokenManager = new TokenManager(requireContext());
@@ -227,22 +208,22 @@ public class EditProfileFragment extends Fragment {
         if (currentUser == null) {
             return true; // Treat as changes if no current user data
         }
-        
+
         String currentFullName = currentUser.getFullName() != null ? currentUser.getFullName().trim() : "";
         String currentPhone = currentUser.getPhone() != null ? currentUser.getPhone().trim() : "";
-        
+
         return !newFullName.equals(currentFullName) || !newPhoneNumber.equals(currentPhone);
     }
 
     private void updateUserInfo(String fullName, String phoneNumber) {
         UserInfoUpdateRequest request = new UserInfoUpdateRequest(fullName, phoneNumber);
-        
+
         Call<UpdateInfoResponse> call = accountApiService.updateUserInfo(request);
         call.enqueue(new Callback<UpdateInfoResponse>() {
             @Override
             public void onResponse(Call<UpdateInfoResponse> call, Response<UpdateInfoResponse> response) {
                 showLoading(false);
-                
+
                 if (response.isSuccessful() && response.body() != null) {
                     // Update was successful
                     handleUpdateSuccess(fullName, phoneNumber, response.body().getMessage());
@@ -288,7 +269,7 @@ public class EditProfileFragment extends Fragment {
 
     private void handleUpdateError(Response<UpdateInfoResponse> response) {
         String errorMessage = "Failed to update profile";
-        
+
         if (response.errorBody() != null) {
             try {
                 String errorBody = response.errorBody().string();
@@ -305,7 +286,7 @@ public class EditProfileFragment extends Fragment {
                 Log.e(TAG, "Error parsing error response", e);
             }
         }
-        
+
         Toast.makeText(getContext(), errorMessage, Toast.LENGTH_LONG).show();
         Log.e(TAG, "Update failed: " + response.code() + " - " + errorMessage);
     }
@@ -314,7 +295,7 @@ public class EditProfileFragment extends Fragment {
         btnSaveChanges.setEnabled(!isLoading);
         btnCancel.setEnabled(!isLoading);
         btnChangePassword.setEnabled(!isLoading);
-        
+
         if (isLoading) {
             btnSaveChanges.setText("Updating...");
         } else {
@@ -344,7 +325,7 @@ public class EditProfileFragment extends Fragment {
         try {
             // Extract first letter of the name
             char firstLetter = fullName.charAt(0);
-            
+
             // Create avatar with the first letter
             AvatarCreator avatarCreator = new AvatarCreator(requireContext());
             ivProfilePicture.setImageBitmap(avatarCreator

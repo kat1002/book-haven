@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -16,18 +15,18 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:paddingHorizontal="16dp"
-            android:paddingBottom="16dp"
-            android:paddingTop="8dp">
+            android:paddingTop="8dp"
+            android:paddingBottom="16dp">
 
             <com.google.android.material.search.SearchBar
                 android:id="@+id/search_bar_explore"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
+                android:layout_weight="1"
                 android:hint="@string/search_hint"
                 app:navigationIcon="@drawable/ic_search"
                 app:navigationIconTint="?attr/colorOnSurface" />
@@ -37,19 +36,9 @@
                 style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:contentDescription="@string/filter_button"
                 app:icon="@drawable/ic_filter"
-                app:iconTint="?attr/colorOnSurface"
-                android:contentDescription="@string/filter_button" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_cart_explore"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="8dp"
-                app:icon="@drawable/ic_shopping_cart"
-                app:iconTint="?attr/colorOnSurface"
-                android:contentDescription="@string/checkout_title" />
+                app:iconTint="?attr/colorOnSurface" />
 
         </LinearLayout>
 
@@ -61,12 +50,12 @@
         android:layout_height="match_parent"
         android:paddingHorizontal="12dp"
         android:paddingTop="8dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-        app:spanCount="2"
-        tools:listitem="@layout/item_explore_book"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintVertical_chainStyle="packed"
-        app:layout_constraintHorizontal_chainStyle="packed"/>
+        app:spanCount="2"
+        tools:listitem="@layout/item_explore_book" />
 
     <com.google.android.material.search.SearchView
         android:id="@+id/search_view_explore"

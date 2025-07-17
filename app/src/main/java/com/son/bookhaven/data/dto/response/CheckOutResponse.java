@@ -1,21 +1,21 @@
 package com.son.bookhaven.data.dto.response;
 
 public class CheckOutResponse {
-    public boolean success ;
+    public boolean success;
 
-    public String message ;
+    public String message;
 
-    public String redirectURl ;
+    public String redirectURl;
 
-    public int orderId ;
+    public int orderId;
 
-    public String recipientName ;
+    public String recipientName;
 
-    public String phoneNumber ;
+    public String phoneNumber;
 
-    public String email ;
+    public String email;
 
-    public double totalAmount ;
+    public double totalAmount;
 
     public boolean isSuccess() {
         return success;
