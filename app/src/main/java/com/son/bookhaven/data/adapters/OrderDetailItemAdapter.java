@@ -9,16 +9,16 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.son.bookhaven.R;
-import com.son.bookhaven.data.model.OrderDetail;
+import com.son.bookhaven.data.dto.OrderDetailResponse;
 
 import java.util.List;
 import java.util.Locale;
 
 public class OrderDetailItemAdapter extends RecyclerView.Adapter<OrderDetailItemAdapter.OrderDetailItemViewHolder> {
 
-    private List<OrderDetail> orderDetailsList;
+    private List<OrderDetailResponse> orderDetailsList;
 
-    public OrderDetailItemAdapter(List<OrderDetail> orderDetailsList) {
+    public OrderDetailItemAdapter(List<OrderDetailResponse> orderDetailsList) {
         this.orderDetailsList = orderDetailsList;
     }
 
@@ -32,12 +32,12 @@ public class OrderDetailItemAdapter extends RecyclerView.Adapter<OrderDetailItem
 
     @Override
     public void onBindViewHolder(@NonNull OrderDetailItemViewHolder holder, int position) {
-        OrderDetail item = orderDetailsList.get(position);
+        OrderDetailResponse item = orderDetailsList.get(position);
 
-        holder.tvProductName.setText(item.getBookName());
+        holder.tvProductName.setText(item.getTitle());
         holder.tvProductQuantity.setText("x" + item.getQuantity());
-        holder.tvPricePerUnit.setText(String.format(Locale.getDefault(), "$%.2f / item", item.getPricePerUnit()));
-        holder.tvItemSubtotal.setText(String.format(Locale.getDefault(), "$%.2f", item.getSubTotal()));
+        holder.tvPricePerUnit.setText(String.format(Locale.getDefault(), "$%.2f / item", item.getUnitPrice()));
+        holder.tvItemSubtotal.setText(String.format(Locale.getDefault(), "$%.2f", item.getSubtotal()));
     }
 
     @Override
@@ -45,7 +45,7 @@ public class OrderDetailItemAdapter extends RecyclerView.Adapter<OrderDetailItem
         return orderDetailsList.size();
     }
 
-    public void updateOrderDetails(List<OrderDetail> newOrderDetails) {
+    public void updateOrderDetails(List<OrderDetailResponse> newOrderDetails) {
         this.orderDetailsList.clear();
         this.orderDetailsList.addAll(newOrderDetails);
         notifyDataSetChanged();
