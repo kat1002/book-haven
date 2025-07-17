@@ -108,29 +108,29 @@ public class CategoryBooksFragment extends Fragment {
 
     private void loadBooksByCategory() {
         bookVariantApiService.getVariantsByCategoryId(categoryId).enqueue(new Callback<>() {
-                    @Override
-                    public void onResponse(Call<ApiResponse<List<BookVariantResponse>>> call,
-                                           Response<ApiResponse<List<BookVariantResponse>>> response) {
-                        if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                            List<BookVariantResponse> variantResponses = response.body().getData();
-                            List<BookVariant> variants = convertToBookVariantModels(variantResponses);
-                            categoryBooksAdapter.updateBookVariants(variants);
-                        } else {
-                            // Handle API error
-                            String errorMsg = "Failed to load books";
-                            if (response.body() != null) {
-                                errorMsg = response.body().getMessage();
-                            }
-                            showError(errorMsg);
-                        }
+            @Override
+            public void onResponse(Call<ApiResponse<List<BookVariantResponse>>> call,
+                                   Response<ApiResponse<List<BookVariantResponse>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<BookVariantResponse> variantResponses = response.body().getData();
+                    List<BookVariant> variants = convertToBookVariantModels(variantResponses);
+                    categoryBooksAdapter.updateBookVariants(variants);
+                } else {
+                    // Handle API error
+                    String errorMsg = "Failed to load books";
+                    if (response.body() != null) {
+                        errorMsg = response.body().getMessage();
                     }
+                    showError(errorMsg);
+                }
+            }
 
-                    @Override
-                    public void onFailure(Call<ApiResponse<List<BookVariantResponse>>> call, Throwable t) {
-                        Log.e(TAG, "Error loading book variants for category", t);
-                        showError("Network error: " + t.getMessage());
-                    }
-                });
+            @Override
+            public void onFailure(Call<ApiResponse<List<BookVariantResponse>>> call, Throwable t) {
+                Log.e(TAG, "Error loading book variants for category", t);
+                showError("Network error: " + t.getMessage());
+            }
+        });
     }
 
     private List<BookVariant> convertToBookVariantModels(List<BookVariantResponse> variantResponses) {
@@ -146,8 +146,8 @@ public class CategoryBooksFragment extends Fragment {
             variant.setIsbn(response.getIsbn());
             variant.setPrice(response.getPrice());
             variant.setStock(response.getStock());
-            variant.setCategoryId(response.getCategoryId());
-            variant.setPublisherId(response.getPublisherId());
+            variant.setCategoryId(response.getCategory().getCategoryId());
+            variant.setPublisherId(response.getPublisher().getPublisherId());
             variant.setPublicationYear(response.getPublicationYear());
 
             // Set related entities

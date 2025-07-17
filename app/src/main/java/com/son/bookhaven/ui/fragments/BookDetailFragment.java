@@ -353,8 +353,8 @@ public class BookDetailFragment extends Fragment {
             variant.setIsbn(response.getIsbn());
             variant.setPrice(response.getPrice());
             variant.setStock(response.getStock());
-            variant.setCategoryId(response.getCategoryId());
-            variant.setPublisherId(response.getPublisherId());
+            variant.setCategoryId(response.getCategory().getCategoryId());
+            variant.setPublisherId(response.getPublisher().getPublisherId());
             variant.setPublicationYear(response.getPublicationYear());
             variant.setLanguage(LanguageCode.valueOf(response.getLanguage()));
             variant.setCategory(response.getCategory());

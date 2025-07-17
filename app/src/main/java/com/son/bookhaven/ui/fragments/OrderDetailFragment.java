@@ -20,14 +20,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.son.bookhaven.R;
+import com.son.bookhaven.data.adapters.OrderDetailItemAdapter;
 import com.son.bookhaven.data.model.Order;
 import com.son.bookhaven.data.model.OrderDetail;
-import com.son.bookhaven.data.adapters.OrderDetailItemAdapter;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -234,11 +233,15 @@ public class OrderDetailFragment extends Fragment {
 
     private String getPaymentMethodString(byte method) {
         switch (method) {
-            case 0: return "Cash on Delivery";
-            case 1: return "Credit Card";
-            case 2: return "Bank Transfer";
+            case 0:
+                return "Cash on Delivery";
+            case 1:
+                return "Credit Card";
+            case 2:
+                return "Bank Transfer";
             // Add more cases as per your payment method byte codes
-            default: return "Unknown";
+            default:
+                return "Unknown";
         }
     }
 

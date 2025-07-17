@@ -12,28 +12,28 @@ import lombok.NoArgsConstructor;
 public class OrderDetailResponse {
     @SerializedName("orderId")
     public int orderId;
-    
+
     @SerializedName("variantId")
     public int variantId;
-    
+
     @SerializedName("quantity")
     public int quantity;
-    
+
     @SerializedName("unitPrice")
     public double unitPrice;
-    
+
     @SerializedName("subtotal")
     public double subtotal;
-    
+
     @SerializedName("url")
     public String url;
-    
+
     @SerializedName("title")
     public String title;
-    
+
     @SerializedName("publicationYear")
     public int publicationYear;
-    
+
     @SerializedName("language")
     public int language;
 } 

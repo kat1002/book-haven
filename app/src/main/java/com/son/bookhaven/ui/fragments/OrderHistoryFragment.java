@@ -1,6 +1,5 @@
 package com.son.bookhaven.ui.fragments; // Adjust your package name
 
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -23,14 +22,14 @@ import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.OrderService;
 import com.son.bookhaven.authService.TokenManager;
-import com.son.bookhaven.data.dto.ApiResponse;
-import com.son.bookhaven.data.dto.PagedResult;
-import com.son.bookhaven.data.dto.OrderResponse;
-import com.son.bookhaven.data.dto.OrderDetailResponse;
 import com.son.bookhaven.data.adapters.OrderAdapter;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.OrderResponse;
+import com.son.bookhaven.data.dto.PagedResult;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -71,7 +70,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         rvOrderHistory = view.findViewById(R.id.rv_order_history);
         layoutEmptyState = view.findViewById(R.id.layout_empty_state);
         progressBar = view.findViewById(R.id.progress_bar);
-        
+
         // Initialize TokenManager
         tokenManager = new TokenManager(requireContext());
     }
@@ -93,7 +92,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         orderAdapter = new OrderAdapter(getContext(), orderList, this); // 'this' implements OnOrderClickListener
         rvOrderHistory.setLayoutManager(new LinearLayoutManager(getContext()));
         rvOrderHistory.setAdapter(orderAdapter);
-        
+
         // Initialize API service
         orderService = ApiClient.getAuthenticatedClient(requireContext()).create(OrderService.class);
     }
@@ -109,7 +108,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
             updateUIState(true);
             return;
         }
-        
+
         int page = 1;
         int pageSize = 10;
 
@@ -121,7 +120,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
                 if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
                     ApiResponse<PagedResult<OrderResponse>> apiResponse = response.body();
                     PagedResult<OrderResponse> pagedResult = apiResponse.getData();
-                    
+
                     if (pagedResult != null && pagedResult.getItems() != null) {
                         List<OrderResponse> orderResponses = pagedResult.getItems();
                         Log.d(TAG, "OrderResponses: " + orderResponses.size() + " items");
@@ -207,7 +206,6 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         fragmentTransaction.addToBackStack(null); // Add to back stack to allow return
         fragmentTransaction.commit();
     }
-
 
 
     private void showError(String message) {

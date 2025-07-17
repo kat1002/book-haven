@@ -8,6 +8,7 @@ public class RemoveCartItemsRequest {
     public List<Integer> getCartItemIds() {
         return itemIds;
     }
+
     public void setCartItemIds(List<Integer> cartItemIds) {
         this.itemIds = cartItemIds;
     }

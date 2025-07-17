@@ -21,8 +21,8 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.gson.Gson;
-import com.son.bookhaven.R;
 import com.pranathicodes.letteravatar.AvatarCreator;
+import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.AccountApiService;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.AuthApiService;
@@ -234,7 +234,7 @@ public class ProfileFragment extends Fragment {
         if (currentUser != null) {
             profileName.setText(currentUser.getFullName());
             profileEmail.setText(currentUser.getEmail());
-            
+
             // Generate avatar with user's name
             generateAvatar(currentUser.getFullName());
         }
@@ -281,7 +281,7 @@ public class ProfileFragment extends Fragment {
         try {
             // Extract first letter of the name
             char firstLetter = fullName.charAt(0);
-            
+
             // Create avatar with the first letter
             AvatarCreator avatarCreator = new AvatarCreator(requireContext());
             profileImage.setImageBitmap(avatarCreator

@@ -5,21 +5,22 @@ import com.google.gson.annotations.SerializedName;
 public class ApiResponse<T> {
     @SerializedName("statusCode")
     private int statusCode;
-    
+
     @SerializedName("message")
     private String message;
-    
+
     @SerializedName("data")
     private T data;
-    
+
     @SerializedName("success")
     private boolean success;
-    
+
     @SerializedName("timestamp")
     private String timestamp;
 
     // Constructors
-    public ApiResponse() {}
+    public ApiResponse() {
+    }
 
     // Getters and Setters
     public int getStatusCode() {

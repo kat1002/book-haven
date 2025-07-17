@@ -1,8 +1,8 @@
 package com.son.bookhaven.data.model;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -18,5 +18,5 @@ public class Author {
     private String authorName;
     private String bio;
     private String createdAt;
-    private Collection<BookVariant> variants = new ArrayList<>();
+    private List<BookVariant> variants = new ArrayList<>();
 }

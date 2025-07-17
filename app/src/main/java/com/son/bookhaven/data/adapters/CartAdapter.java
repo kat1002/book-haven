@@ -1,24 +1,25 @@
 package com.son.bookhaven.data.adapters;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textview.MaterialTextView;
 import com.son.bookhaven.R;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
 
 import java.text.NumberFormat;
-import java.util.ArrayList; // <--- IMPORT ArrayList
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import android.util.Log;
 
 public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder> {
 
@@ -136,14 +137,14 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
             btnDecrement.setOnClickListener(v -> {
                 if (item.getQuantity() > 1) {
                     if (onQuantityChangeListener != null) {
-                        onQuantityChangeListener.onQuantityChange(item, - 1);
+                        onQuantityChangeListener.onQuantityChange(item, -1);
                     }
                 }
             });
 
             btnIncrement.setOnClickListener(v -> {
                 if (onQuantityChangeListener != null) {
-                    onQuantityChangeListener.onQuantityChange(item,  + 1);
+                    onQuantityChangeListener.onQuantityChange(item, +1);
                 }
             });
         }

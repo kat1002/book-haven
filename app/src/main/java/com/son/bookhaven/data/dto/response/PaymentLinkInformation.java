@@ -1,7 +1,6 @@
 package com.son.bookhaven.data.dto.response;
 
 import java.util.Date;
-import java.util.List;
 
 public class PaymentLinkInformation {
     private String id;

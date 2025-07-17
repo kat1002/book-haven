@@ -1,9 +1,9 @@
 package com.son.bookhaven.ui.fragments; // Adjust your package name
 
 import android.os.Bundle;
-import android.text.Editable; // Import Editable
+import android.text.Editable;
 import android.text.TextUtils;
-import android.text.TextWatcher; // Import TextWatcher
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,7 +18,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.son.bookhaven.R; // Ensure this imports your R file correctly
+import com.son.bookhaven.R;
 
 import java.util.regex.Pattern;
 
@@ -89,9 +89,13 @@ public class ChangePasswordFragment extends Fragment {
         // TextWatcher for Current Password field
         etCurrentPassword.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
             @Override
             public void afterTextChanged(Editable s) {
                 validateCurrentPassword(s.toString());
@@ -101,9 +105,13 @@ public class ChangePasswordFragment extends Fragment {
         // TextWatcher for New Password field
         etNewPassword.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
             @Override
             public void afterTextChanged(Editable s) {
                 validateNewPassword(s.toString());
@@ -115,9 +123,13 @@ public class ChangePasswordFragment extends Fragment {
         // TextWatcher for Confirm New Password field
         etConfirmNewPassword.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
             @Override
             public void afterTextChanged(Editable s) {
                 validateConfirmNewPassword(s.toString());
@@ -152,8 +164,7 @@ public class ChangePasswordFragment extends Fragment {
             // Only show this error if current password field is not empty itself
             tilNewPassword.setError("New password cannot be the same as the current password.");
             return false;
-        }
-        else {
+        } else {
             tilNewPassword.setError(null); // Clear error if valid
             return true;
         }

@@ -15,7 +15,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
-import com.son.bookhaven.R; // Ensure R is correctly imported
+import com.son.bookhaven.R;
 
 public class ForgotPasswordFragment extends Fragment {
 
@@ -78,7 +78,8 @@ public class ForgotPasswordFragment extends Fragment {
         // TODO: Implement actual password reset logic here (e.g., API call to your backend)
         // For demonstration purposes, we'll just show a Snackbar.
         Snackbar.make(requireView(), getString(R.string.password_reset_sent, email), Snackbar.LENGTH_LONG)
-                .setAction(getString(R.string.dismiss), v -> {})
+                .setAction(getString(R.string.dismiss), v -> {
+                })
                 .show();
 
         // In a real application, after a successful reset request, you might

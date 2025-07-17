@@ -21,7 +21,6 @@ import com.google.android.material.search.SearchBar;
 import com.google.android.material.search.SearchView;
 import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.BookApiService;
 import com.son.bookhaven.apiHelper.BookVariantApiService;
 import com.son.bookhaven.apiHelper.CategoryApiService;
 import com.son.bookhaven.data.adapters.CategoryAdapter;
@@ -30,9 +29,9 @@ import com.son.bookhaven.data.adapters.NewArrivalsAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.response.BookVariantResponse;
 import com.son.bookhaven.data.dto.response.CategoryResponse;
+import com.son.bookhaven.data.model.Author;
 import com.son.bookhaven.data.model.BookVariant;
 import com.son.bookhaven.data.model.LanguageCode;
-import com.son.bookhaven.data.model.Author;
 import com.son.bookhaven.data.model.Publisher;
 
 import java.math.BigDecimal;
@@ -67,7 +66,6 @@ public class HomeFragment extends Fragment {
     // Store only lowest price variants
     private List<BookVariant> lowestPriceVariants = new ArrayList<>();
 
-    private BookApiService bookApiService;
     private BookVariantApiService bookVariantApiService;
 
     private RecyclerView rvCategories;
@@ -79,8 +77,6 @@ public class HomeFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        // Initialize API services
-        bookApiService = ApiClient.getClient().create(BookApiService.class);
         bookVariantApiService = ApiClient.getClient().create(BookVariantApiService.class);
         categoryApiService = ApiClient.getClient().create(CategoryApiService.class);
 
@@ -116,10 +112,8 @@ public class HomeFragment extends Fragment {
     private void setupCategoriesRecyclerView() {
         rvCategories.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         categoryAdapter = new CategoryAdapter(new ArrayList<>());
-        categoryAdapter.setOnCategoryClickListener(category -> {
-            // Navigate to category detail showing all book variants in this category
-            navigateToCategoryBooks(category);
-        });
+        // Navigate to category detail showing all book variants in this category
+        categoryAdapter.setOnCategoryClickListener(this::navigateToCategoryBooks);
         rvCategories.setAdapter(categoryAdapter);
     }
 
@@ -224,11 +218,10 @@ public class HomeFragment extends Fragment {
             return false;
         });
 
-        if (searchView.getToolbar() != null) {
-            searchView.getToolbar().setNavigationOnClickListener(v -> {
-                searchView.hide();
-            });
-        }
+        searchView.getToolbar();
+        searchView.getToolbar().setNavigationOnClickListener(v -> {
+            searchView.hide();
+        });
     }
 
     private void performSearch(String query) {
@@ -239,13 +232,13 @@ public class HomeFragment extends Fragment {
 
         // Search across all book variants
         List<BookVariant> searchResults = allBookVariants.stream()
-            .filter(variant ->
-                variant.getTitle().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)) ||
-                (variant.getIsbn() != null && variant.getIsbn().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
-                (variant.getDescription() != null && variant.getDescription().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
-                (variant.getAuthors() != null && variant.getAuthors().stream().anyMatch(
-                        author -> author.getAuthorName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)))))
-            .collect(Collectors.toList());
+                .filter(variant ->
+                        variant.getTitle().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)) ||
+                                (variant.getIsbn() != null && variant.getIsbn().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
+                                (variant.getDescription() != null && variant.getDescription().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) ||
+                                (variant.getAuthors() != null && variant.getAuthors().stream().anyMatch(
+                                        author -> author.getAuthorName().toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT)))))
+                .collect(Collectors.toList());
 
         searchResultsAdapter.updateBookVariants(searchResults);
     }
@@ -402,8 +395,8 @@ public class HomeFragment extends Fragment {
             variant.setIsbn(response.getIsbn());
             variant.setPrice(response.getPrice());
             variant.setStock(response.getStock());
-            variant.setCategoryId(response.getCategoryId());
-            variant.setPublisherId(response.getPublisherId());
+            variant.setCategoryId(response.getCategory().getCategoryId());
+            variant.setPublisherId(response.getPublisher().getPublisherId());
             variant.setPublicationYear(response.getPublicationYear());
 
             // Convert language code string to enum
@@ -418,11 +411,26 @@ public class HomeFragment extends Fragment {
             // Set created/updated dates
             if (response.getCreatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 try {
+                    // Try ISO_DATE_TIME format first
                     DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
                     variant.setCreatedAt(LocalDateTime.parse(response.getCreatedAt(), formatter));
                 } catch (Exception e) {
-                    Log.e(TAG, "Date parsing error", e);
+                    try {
+                        // If that fails, try a more flexible pattern that matches your API response
+                        DateTimeFormatter alternateFormatter =
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSS][XXX]");
+                        variant.setCreatedAt(LocalDateTime.parse(response.getCreatedAt(), alternateFormatter));
+                    } catch (Exception e2) {
+                        // If all parsing fails, set a default date (now)
+                        Log.e(TAG, "Date parsing error: " + response.getCreatedAt(), e2);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            variant.setCreatedAt(LocalDateTime.now());
+                        }
+                    }
                 }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // If createdAt is null or empty, set current time
+                variant.setCreatedAt(LocalDateTime.now());
             }
 
             if (response.getUpdatedAt() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

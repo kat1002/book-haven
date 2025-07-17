@@ -1,11 +1,10 @@
 package com.son.bookhaven;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
-import android.os.Bundle;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,14 +17,13 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
-
 import com.google.android.material.snackbar.Snackbar;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.CartApiService;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
-import com.son.bookhaven.ui.fragments.HomeFragment;
-import com.son.bookhaven.ui.fragments.ExploreFragment;
 import com.son.bookhaven.ui.fragments.CartFragment;
+import com.son.bookhaven.ui.fragments.ExploreFragment;
+import com.son.bookhaven.ui.fragments.HomeFragment;
 import com.son.bookhaven.ui.fragments.OrderConfirmationFragment;
 import com.son.bookhaven.ui.fragments.OrderHistoryFragment;
 import com.son.bookhaven.ui.fragments.ProfileFragment;
@@ -54,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
 
     private long lastCartFetchTime = 0;
     private static final long CART_FETCH_COOLDOWN = 2000;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -202,6 +201,7 @@ public class MainActivity extends AppCompatActivity {
             cartBadge.setMaxCharacterCount(3);
         }
     }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -235,6 +235,7 @@ public class MainActivity extends AppCompatActivity {
                     .show();
         }
     }
+
     public void updateCartBadge(int initialCount) {
         long currentTime = System.currentTimeMillis();
         if (initialCount > 0 && (currentTime - lastCartFetchTime < CART_FETCH_COOLDOWN)) {
@@ -280,6 +281,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
     private void updateBadgeVisibility(int count) {
         if (cartBadge != null) {
             if (count > 0) {
@@ -291,6 +293,7 @@ public class MainActivity extends AppCompatActivity {
         }
         cartItemCount = count;
     }
+
     // Call this method when items are added to cart
     public void addToCart() {
         cartItemCount++;

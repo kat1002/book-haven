@@ -31,7 +31,7 @@ import com.son.bookhaven.apiHelper.AddressApiClient;
 import com.son.bookhaven.apiHelper.AddressApiService;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.CheckOutService;
-import com.son.bookhaven.data.adapters.CartItemAdapter; // Assuming this is your adapter package
+import com.son.bookhaven.data.adapters.CartItemAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.request.CheckOutRequest;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
@@ -563,6 +563,7 @@ public class CheckoutFragment extends Fragment {
                     }
                 });
     }
+
     private void saveOrderInProgress() {
         // Save information that user has a payment in progress
         SharedPreferences prefs = requireContext().getSharedPreferences("payment_prefs", Context.MODE_PRIVATE);
