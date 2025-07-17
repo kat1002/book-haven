@@ -18,25 +18,22 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.son.bookhaven.R;
-import com.son.bookhaven.data.adapters.OrderDetailItemAdapter;
-import com.son.bookhaven.data.model.Order;
-import com.son.bookhaven.data.model.OrderDetail;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.OrderService;
-import com.son.bookhaven.data.dto.ApiResponse;
-import com.son.bookhaven.data.dto.OrderResponse;
-import com.son.bookhaven.data.dto.OrderDetailResponse;
 import com.son.bookhaven.data.adapters.OrderDetailItemAdapter;
-
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.OrderDetailResponse;
+import com.son.bookhaven.data.dto.OrderResponse;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class OrderDetailFragment extends Fragment {
 
@@ -166,8 +163,8 @@ public class OrderDetailFragment extends Fragment {
         Call<ApiResponse<OrderResponse>> call = orderService.getOrderById(id);
         call.enqueue(new Callback<ApiResponse<OrderResponse>>() {
             @Override
-            public void onResponse(@NonNull Call<ApiResponse<OrderResponse>> call, 
-                                 @NonNull Response<ApiResponse<OrderResponse>> response) {
+            public void onResponse(@NonNull Call<ApiResponse<OrderResponse>> call,
+                                   @NonNull Response<ApiResponse<OrderResponse>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     ApiResponse<OrderResponse> apiResponse = response.body();
                     if (apiResponse.isSuccess() && apiResponse.getData() != null) {
@@ -176,8 +173,8 @@ public class OrderDetailFragment extends Fragment {
                         showContentState();
                         Log.d(TAG, "Order details loaded for ID: " + id);
                     } else {
-                        String errorMessage = apiResponse.getMessage() != null ? 
-                            apiResponse.getMessage() : "Failed to load order details.";
+                        String errorMessage = apiResponse.getMessage() != null ?
+                                apiResponse.getMessage() : "Failed to load order details.";
                         showErrorState(errorMessage);
                         Log.e(TAG, "API Error: " + errorMessage);
                     }
@@ -222,19 +219,19 @@ public class OrderDetailFragment extends Fragment {
         // Delivery Information
         // Build full delivery address from components
         String fullAddress = buildDeliveryAddress(order.getStreet(), order.getWard(), order.getDistrict(), order.getCity());
-        
+
         if (order.getRecipientName() != null && !order.getRecipientName().isEmpty()) {
             tvDetailRecipientName.setText(getString(R.string.recipient_name_format, order.getRecipientName()));
         } else {
             tvDetailRecipientName.setText(getString(R.string.recipient_name_format, "N/A"));
         }
-        
+
         if (order.getPhoneNumber() != null && !order.getPhoneNumber().isEmpty()) {
             tvDetailRecipientPhone.setText(getString(R.string.recipient_phone_format, order.getPhoneNumber()));
         } else {
             tvDetailRecipientPhone.setText(getString(R.string.recipient_phone_format, "N/A"));
         }
-        
+
         if (fullAddress != null && !fullAddress.isEmpty()) {
             tvDetailDeliveryAddress.setText(getString(R.string.delivery_address_format, fullAddress));
         } else {
@@ -260,26 +257,26 @@ public class OrderDetailFragment extends Fragment {
 
     private String buildDeliveryAddress(String street, String ward, String district, String city) {
         StringBuilder address = new StringBuilder();
-        
+
         if (street != null && !street.trim().isEmpty()) {
             address.append(street.trim());
         }
-        
+
         if (ward != null && !ward.trim().isEmpty()) {
             if (address.length() > 0) address.append(", ");
             address.append(ward.trim());
         }
-        
+
         if (district != null && !district.trim().isEmpty()) {
             if (address.length() > 0) address.append(", ");
             address.append(district.trim());
         }
-        
+
         if (city != null && !city.trim().isEmpty()) {
             if (address.length() > 0) address.append(", ");
             address.append(city.trim());
         }
-        
+
         return address.length() > 0 ? address.toString() : null;
     }
 
@@ -342,5 +339,5 @@ public class OrderDetailFragment extends Fragment {
         }
     }
 
-    
+
 }

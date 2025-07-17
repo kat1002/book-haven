@@ -121,10 +121,12 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         // Setup search functionality
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -138,7 +140,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         statusFilterChips.setOnCheckedStateChangeListener((group, checkedIds) -> {
             // Reset status filter
             currentStatus = null;
-            
+
             // Check which chip is selected (only one can be selected due to singleSelection="true")
             if (!checkedIds.isEmpty()) {
                 int checkedId = checkedIds.get(0);
@@ -155,11 +157,10 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
                 }
                 // If none match (shouldn't happen), currentStatus remains null
             }
-            
+
             loadOrderHistory();
         });
     }
-
 
 
     private void loadOrderHistory() {

@@ -1,7 +1,6 @@
 package com.son.bookhaven.data.model;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import lombok.AllArgsConstructor;

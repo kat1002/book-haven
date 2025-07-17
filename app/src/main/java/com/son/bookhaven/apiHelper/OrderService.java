@@ -28,7 +28,7 @@ public interface OrderService {
 
     @POST("api/Order/update-status")
     Call<ApiResponse<String>> updateOrderStatus(@Body UpdateOrderRequest request);
-    
+
     @GET("api/order/{id}")
     Call<ApiResponse<OrderResponse>> getOrderById(@Path("id") int orderId);
 } 
