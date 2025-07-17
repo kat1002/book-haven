@@ -12,22 +12,29 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textview.MaterialTextView;
+import com.son.bookhaven.MainActivity;
 import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.BookVariantApiService;
+import com.son.bookhaven.apiHelper.CartApiService;
 import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.request.CartItemUpdateRequest;
 import com.son.bookhaven.data.dto.response.BookVariantResponse;
 import com.son.bookhaven.data.model.Author;
 import com.son.bookhaven.data.model.BookImage;
 import com.son.bookhaven.data.model.BookVariant;
 import com.son.bookhaven.data.model.LanguageCode;
 
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -56,9 +63,12 @@ public class BookDetailFragment extends Fragment {
     private List<BookVariant> bookVariants = new ArrayList<>(); // To store all variants of the book
     private BookVariant selectedVariant; // Currently selected variant
     private BookVariantApiService bookVariantApiService;
+    private final NumberFormat currencyFormatter;
 
     public BookDetailFragment() {
         // Required empty public constructor
+        this.currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN")); // Or your desired locale
+        currencyFormatter.setGroupingUsed(true);
     }
 
     /**
@@ -210,7 +220,7 @@ public class BookDetailFragment extends Fragment {
 
         // Set price
         if (selectedVariant.getPrice() != null) {
-            tvBookPrice.setText(String.format(Locale.getDefault(), "%.0f VND", selectedVariant.getPrice()));
+            tvBookPrice.setText(currencyFormatter.format(selectedVariant.getPrice()));
         } else {
             tvBookPrice.setText(R.string.price_not_available);
         }
@@ -262,31 +272,83 @@ public class BookDetailFragment extends Fragment {
         // Update button states based on stock
         boolean isInStock = selectedVariant.getStock() > 0;
         fabAddToCart.setEnabled(isInStock);
-        fabBuyNow.setEnabled(isInStock);
+        fabBuyNow.setVisibility(isInStock ? View.VISIBLE : View.GONE);
+        if (!isInStock) {
+            fabAddToCart.setText(R.string.out_of_stock);
+        }
     }
 
     private void setupButtons() {
         fabAddToCart.setOnClickListener(v -> {
             if (selectedVariant != null) {
-                Toast.makeText(getContext(),
-                        String.format("Added %s to cart", selectedVariant.getTitle()),
-                        Toast.LENGTH_SHORT).show();
-                // TODO: Implement actual add to cart functionality
+                Snackbar.make(v, "Adding " + selectedVariant.getTitle() + " to cart", Snackbar.LENGTH_SHORT).show();
+                addToCart(selectedVariant);
             }
         });
 
         fabBuyNow.setOnClickListener(v -> {
             if (selectedVariant != null) {
-                Toast.makeText(getContext(),
-                        String.format("Buy now: %s", selectedVariant.getTitle()),
-                        Toast.LENGTH_SHORT).show();
-                // TODO: Implement buy now functionality
+                Snackbar.make(v, "Adding " + selectedVariant.getTitle() + " to cart", Snackbar.LENGTH_SHORT).show();
+                addToCart(selectedVariant);
+                navigateToCart();
             }
         });
     }
 
+    private void navigateToCart() {
+        // Create a new instance of CartFragment
+        CartFragment cartFragment = new CartFragment();
+
+        // Get the FragmentManager and start a transaction
+        FragmentManager fragmentManager = getParentFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+        // Replace the current fragment with CartFragment
+        fragmentTransaction.replace(R.id.frame_layout, cartFragment);
+
+        // Add the transaction to the back stack so the user can navigate back
+        fragmentTransaction.addToBackStack(null);
+
+        // Commit the transaction
+        fragmentTransaction.commit();
+    }
+
     private void showLoading(boolean isLoading) {
         // TODO: Implement loading indicator
+    }
+
+    private void addToCart(BookVariant variant) {
+        // Show loading indicator if needed
+        CartApiService cartApiService = ApiClient.getAuthenticatedClient(requireContext()).create(CartApiService.class);
+
+        CartItemUpdateRequest request = new CartItemUpdateRequest(
+                variant.getVariantId(),
+                1  // Adding 1 item to cart
+        );
+
+        cartApiService.updateCartItemQuantity(request).enqueue(new Callback<>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                if (response.isSuccessful()) {
+
+                    // Update the cart badge in MainActivity
+                    if (getActivity() instanceof MainActivity) {
+                        ((MainActivity) getActivity()).updateCartBadge(0); // This will trigger a refresh
+                    }
+                } else {
+                    // Show error message
+                    Snackbar.make(getView(), "Failed to add item to cart", Snackbar.LENGTH_SHORT).show();
+                    Log.e(TAG, "Failed to add to cart. Response code: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                // Show network error
+                Snackbar.make(getView(), "Network error. Please try again.", Snackbar.LENGTH_SHORT).show();
+                Log.e(TAG, "Error adding to cart: " + t.getMessage());
+            }
+        });
     }
 
     private void showError(String message) {

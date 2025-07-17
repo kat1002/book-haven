@@ -1,31 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="?attr/colorSurfaceContainerLow"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="?attr/colorSurfaceContainerLow">
+    android:padding="16dp">
 
     <!-- Filter Header -->
     <com.google.android.material.textview.MaterialTextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_horizontal"
         android:text="@string/filter_button"
         android:textAppearance="?attr/textAppearanceTitleLarge"
-        android:textStyle="bold"
-        android:gravity="center_horizontal"
-        android:layout_marginBottom="16dp"/>
+        android:textStyle="bold" />
 
     <!-- Filter by Category -->
     <com.google.android.material.textview.MaterialTextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
         android:text="@string/filter_by_category"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="8dp"/>
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroupCategories"
@@ -43,9 +41,9 @@
     <com.google.android.material.textview.MaterialTextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
         android:text="@string/filter_by_language"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="8dp"/>
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <com.google.android.material.chip.ChipGroup
         android:id="@+id/chipGroupLanguages"
@@ -59,13 +57,70 @@
         <!-- Chips will be added programmatically -->
     </com.google.android.material.chip.ChipGroup>
 
+    <!-- Filter by Price Range -->
+    <com.google.android.material.textview.MaterialTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="@string/filter_by_price_range"
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/textInputLayoutMinPrice"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:hint="@string/min_price_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/textInputEditTextMinPrice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textview.MaterialTextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-"
+            android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/textInputLayoutMaxPrice"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:hint="@string/max_price_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/textInputEditTextMaxPrice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+    </LinearLayout>
+
     <!-- Filter by Author -->
     <com.google.android.material.textview.MaterialTextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
         android:text="@string/filter_by_author"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="8dp"/>
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <com.google.android.material.textfield.TextInputLayout
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -78,16 +133,16 @@
             android:id="@+id/dropdownAuthors"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="none"/>
+            android:inputType="none" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Filter by Publisher -->
     <com.google.android.material.textview.MaterialTextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
         android:text="@string/filter_by_publisher"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="8dp"/>
+        android:textAppearance="?attr/textAppearanceTitleMedium" />
 
     <com.google.android.material.textfield.TextInputLayout
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -100,94 +155,38 @@
             android:id="@+id/dropdownPublishers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="none"/>
+            android:inputType="none" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Filter by Price Range -->
-    <com.google.android.material.textview.MaterialTextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/filter_by_price_range"
-        android:textAppearance="?attr/textAppearanceTitleMedium"
-        android:layout_marginBottom="8dp"/>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="24dp"
-        android:gravity="center_vertical">
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/textInputLayoutMinPrice"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:hint="@string/min_price_hint">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/textInputEditTextMinPrice"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="numberDecimal"/>
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textview.MaterialTextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="-"
-            android:textAppearance="?attr/textAppearanceTitleMedium"/>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/textInputLayoutMaxPrice"
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:hint="@string/max_price_hint">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/textInputEditTextMaxPrice"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="numberDecimal"/>
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-    </LinearLayout>
 
     <!-- Action Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_horizontal">
+        android:gravity="center_horizontal"
+        android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonClearFilters"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="@string/clear_filters"
+            android:layout_weight="1"
             android:paddingVertical="12dp"
-            app:cornerRadius="12dp"/>
+            android:text="@string/clear_filters"
+            app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonApplyFilters"
             style="@style/Widget.Material3.Button.IconButton.Filled"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:text="@string/apply_filters"
+            android:layout_weight="1"
             android:paddingVertical="12dp"
-            app:cornerRadius="12dp"/>
+            android:text="@string/apply_filters"
+            app:cornerRadius="12dp" />
 
     </LinearLayout>
 

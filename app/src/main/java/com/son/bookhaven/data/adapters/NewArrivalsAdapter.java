@@ -17,12 +17,18 @@ import com.son.bookhaven.R;
 import com.son.bookhaven.data.model.BookImage;
 import com.son.bookhaven.data.model.BookVariant;
 
+import java.text.NumberFormat;
 import java.util.List;
+import java.util.Locale;
+
+import lombok.Setter;
 
 public class NewArrivalsAdapter extends RecyclerView.Adapter<NewArrivalsAdapter.NewArrivalViewHolder> {
 
     private List<BookVariant> variants;
+    @Setter
     private OnBookClickListener onBookClickListener;
+    private final NumberFormat currencyFormatter;
 
     public interface OnBookClickListener {
         void onBookVariantClick(BookVariant variant);
@@ -32,10 +38,8 @@ public class NewArrivalsAdapter extends RecyclerView.Adapter<NewArrivalsAdapter.
 
     public NewArrivalsAdapter(List<BookVariant> variants) {
         this.variants = variants;
-    }
-
-    public void setOnBookClickListener(OnBookClickListener listener) {
-        this.onBookClickListener = listener;
+        this.currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN")); // Or your desired locale
+        currencyFormatter.setGroupingUsed(true);
     }
 
     public void updateBookVariants(List<BookVariant> newBookVariants) {
@@ -115,7 +119,7 @@ public class NewArrivalsAdapter extends RecyclerView.Adapter<NewArrivalsAdapter.
 
             // Safely display price if available
             if (variant.getPrice() != null) {
-                tvPrice.setText(variant.getPrice().toString());
+                tvPrice.setText(currencyFormatter.format(variant.getPrice()));
             } else {
                 tvPrice.setText("N/A");
             }
@@ -129,19 +133,10 @@ public class NewArrivalsAdapter extends RecyclerView.Adapter<NewArrivalsAdapter.
                 }
             }
 
+            boolean hasStock = variant.getStock() > 0;
+            btnAddToCart.setEnabled(hasStock);
+
             loadBookCover(imageUrl);
-        }
-
-        private void setupStarRating(float rating) {
-            // Get the parent view of the rating layout to find star ImageViews
-            View parentView = itemView;
-
-            // Example implementation:
-            int fullStars = (int) rating;
-            boolean hasHalfStar = (rating % 1) >= 0.5;
-
-            // You can implement star display logic here
-            // For now, just showing the rating in text format
         }
 
         private void loadBookCover(String coverImageUrl) {

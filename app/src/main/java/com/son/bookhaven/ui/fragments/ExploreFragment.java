@@ -313,15 +313,13 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
 
             // Category filter
             if (currentFilterCategoryId != null &&
-                    (variant.getCategoryId() > 0 ||
-                            !currentFilterCategoryId.equals(variant.getCategoryId()))) {
+                    currentFilterCategoryId != variant.getCategoryId()) {
                 variantMatches = false;
             }
 
             // Publisher filter
             if (currentFilterPublisherId != null &&
-                    (variant.getPublisherId() > 0 ||
-                            !currentFilterPublisherId.equals(variant.getPublisherId()))) {
+                    currentFilterPublisherId != variant.getPublisherId()) {
                 variantMatches = false;
             }
 

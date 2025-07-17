@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
         bottomNavigationView = findViewById(R.id.bottom_navigation);
 
         // Set default fragment
-        replaceFragment(signUpFragment);
+        replaceFragment(profileFragment);
 
         setupCartBadge();
 

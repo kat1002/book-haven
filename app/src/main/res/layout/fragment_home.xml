@@ -29,14 +29,6 @@
                 app:navigationIcon="@drawable/ic_search"
                 app:navigationIconTint="?attr/colorOnSurface" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_cart"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                app:icon="@drawable/ic_shopping_cart"
-                app:iconTint="?attr/colorOnSurface" />
-
         </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
