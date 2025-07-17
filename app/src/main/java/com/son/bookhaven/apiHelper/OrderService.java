@@ -18,7 +18,9 @@ public interface OrderService {
     Call<ApiResponse<PagedResult<OrderResponse>>> getUserOrders(
             @Query("userId") int userId,
             @Query("page") int page,
-            @Query("pageSize") int pageSize
+            @Query("pageSize") int pageSize,
+            @Query("searchTerm") String searchTerm,
+            @Query("status") String status
     );
 
     @GET("api/Order/payment-check")
@@ -26,7 +28,7 @@ public interface OrderService {
 
     @POST("api/Order/update-status")
     Call<ApiResponse<String>> updateOrderStatus(@Body UpdateOrderRequest request);
-
-    @GET("api/Order/{id}")
+    
+    @GET("api/order/{id}")
     Call<ApiResponse<OrderResponse>> getOrderById(@Path("id") int orderId);
 } 
