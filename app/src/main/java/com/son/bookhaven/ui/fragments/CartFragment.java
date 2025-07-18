@@ -259,8 +259,8 @@ public class CartFragment extends Fragment {
                 subtotal = subtotal.add(item.getTotalPrice());
             }
         }
-        binding.subtotalText.setText(String.format(Locale.US, "$%.2f", subtotal));
-        binding.totalText.setText(String.format(Locale.US, "$%.2f", subtotal));
+        binding.subtotalText.setText(String.format(new Locale("vi", "VN"), "%,.0f₫", subtotal));
+        binding.totalText.setText(String.format(new Locale("vi", "VN"), "%,.0f₫", subtotal));
 
         // You can add logic for discount, shipping, etc., here if needed
         // binding.discountLayout.setVisibility(discount > 0 ? View.VISIBLE : View.GONE);
