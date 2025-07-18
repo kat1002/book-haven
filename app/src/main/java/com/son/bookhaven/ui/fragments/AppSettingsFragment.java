@@ -16,7 +16,7 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.materialswitch.MaterialSwitch;
-import com.son.bookhaven.R; // Make sure your R file is correctly imported
+import com.son.bookhaven.R;
 
 public class AppSettingsFragment extends Fragment {
 

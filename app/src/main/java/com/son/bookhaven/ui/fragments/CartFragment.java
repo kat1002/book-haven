@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -12,14 +13,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.son.bookhaven.MainActivity;
-import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.CartApiService;
 import com.son.bookhaven.data.adapters.CartAdapter;
 import com.son.bookhaven.data.dto.request.CartItemUpdateRequest;
 import com.son.bookhaven.data.dto.request.RemoveCartItemsRequest;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
-import com.son.bookhaven.databinding.FragmentCartBinding; // Make sure ViewBinding is enabled and package correct
+import com.son.bookhaven.databinding.FragmentCartBinding;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -154,6 +154,7 @@ public class CartFragment extends Fragment {
         super.onDestroyView();
         binding = null; // Release the binding when the view is destroyed
     }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -164,6 +165,7 @@ public class CartFragment extends Fragment {
             ((MainActivity) getActivity()).updateCartBadge(0);
         }
     }
+
     private void removeSelectedItems(List<CartItemResponse> itemsToRemove) {
 
 
@@ -217,12 +219,13 @@ public class CartFragment extends Fragment {
             }
         });
     }
+
     private void loadCartItems() {
 
         Log.d("LoadCartItems", "Loading cart items from API...");
 
         CartApiService apiService = ApiClient.getAuthenticatedClient(requireContext()).create(CartApiService.class);
-       // int userId = 11; // Thay bằng userId thực tế, có thể lấy từ SharedPreferences hoặc login
+        // int userId = 11; // Thay bằng userId thực tế, có thể lấy từ SharedPreferences hoặc login
         Call<List<CartItemResponse>> call = apiService.getCart();
 
         call.enqueue(new Callback<List<CartItemResponse>>() {

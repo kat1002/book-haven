@@ -1,7 +1,8 @@
 package com.son.bookhaven.ui.fragments; // Adjust your package name
 
-import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,18 +20,21 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.textfield.TextInputEditText;
 import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.OrderService;
 import com.son.bookhaven.authService.TokenManager;
-import com.son.bookhaven.data.dto.ApiResponse;
-import com.son.bookhaven.data.dto.PagedResult;
-import com.son.bookhaven.data.dto.OrderResponse;
-import com.son.bookhaven.data.dto.OrderDetailResponse;
 import com.son.bookhaven.data.adapters.OrderAdapter;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.OrderResponse;
+import com.son.bookhaven.data.dto.PagedResult;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -40,6 +44,9 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
     private static final String TAG = "OrderHistoryFragment";
 
     private MaterialToolbar toolbar;
+    private TextInputEditText searchInput;
+    private ChipGroup statusFilterChips;
+    private Chip chipAll, chipPendingPayment, chipDelivering, chipDelivered, chipCancelled;
     private RecyclerView rvOrderHistory;
     private LinearLayout layoutEmptyState;
     private ProgressBar progressBar;
@@ -48,6 +55,10 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
     private List<OrderResponse> orderList;
     private OrderService orderService;
     private TokenManager tokenManager;
+
+    // Search and filter variables
+    private String currentSearchTerm = null;
+    private String currentStatus = null;
 
     public OrderHistoryFragment() {
         // Required empty public constructor
@@ -61,17 +72,25 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         initViews(view);
         setupToolbar();
         setupRecyclerView();
-        loadOrderHistory(); // Simulate loading order data
+        setupSearchAndFilter();
+        loadOrderHistory(); // Load initial order data
 
         return view;
     }
 
     private void initViews(View view) {
         toolbar = view.findViewById(R.id.toolbar_order_history);
+        searchInput = view.findViewById(R.id.search_input);
+        statusFilterChips = view.findViewById(R.id.status_filter_chips);
+        chipAll = view.findViewById(R.id.chip_all);
+        chipPendingPayment = view.findViewById(R.id.chip_pending_payment);
+        chipDelivering = view.findViewById(R.id.chip_delivering);
+        chipDelivered = view.findViewById(R.id.chip_delivered);
+        chipCancelled = view.findViewById(R.id.chip_cancelled);
         rvOrderHistory = view.findViewById(R.id.rv_order_history);
         layoutEmptyState = view.findViewById(R.id.layout_empty_state);
         progressBar = view.findViewById(R.id.progress_bar);
-        
+
         // Initialize TokenManager
         tokenManager = new TokenManager(requireContext());
     }
@@ -93,10 +112,56 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         orderAdapter = new OrderAdapter(getContext(), orderList, this); // 'this' implements OnOrderClickListener
         rvOrderHistory.setLayoutManager(new LinearLayoutManager(getContext()));
         rvOrderHistory.setAdapter(orderAdapter);
-        
+
         // Initialize API service
         orderService = ApiClient.getAuthenticatedClient(requireContext()).create(OrderService.class);
     }
+
+    private void setupSearchAndFilter() {
+        // Setup search functionality
+        searchInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String searchText = s.toString().trim();
+                currentSearchTerm = searchText.isEmpty() ? null : searchText;
+                loadOrderHistory();
+            }
+        });
+
+        // Setup filter chips
+        statusFilterChips.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            // Reset status filter
+            currentStatus = null;
+
+            // Check which chip is selected (only one can be selected due to singleSelection="true")
+            if (!checkedIds.isEmpty()) {
+                int checkedId = checkedIds.get(0);
+                if (checkedId == R.id.chip_pending_payment) {
+                    currentStatus = "PendingPayment";
+                } else if (checkedId == R.id.chip_delivering) {
+                    currentStatus = "Delivering";
+                } else if (checkedId == R.id.chip_delivered) {
+                    currentStatus = "Delivered";
+                } else if (checkedId == R.id.chip_cancelled) {
+                    currentStatus = "Cancelled";
+                } else if (checkedId == R.id.chip_all) {
+                    currentStatus = null;
+                }
+                // If none match (shouldn't happen), currentStatus remains null
+            }
+
+            loadOrderHistory();
+        });
+    }
+
 
     private void loadOrderHistory() {
         showLoadingState();
@@ -109,11 +174,12 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
             updateUIState(true);
             return;
         }
-        
+
         int page = 1;
         int pageSize = 10;
 
-        Call<ApiResponse<PagedResult<OrderResponse>>> call = orderService.getUserOrders(userId, page, pageSize);
+        Call<ApiResponse<PagedResult<OrderResponse>>> call = orderService.getUserOrders(
+                userId, page, pageSize, currentSearchTerm, currentStatus);
         call.enqueue(new Callback<ApiResponse<PagedResult<OrderResponse>>>() {
             @Override
             public void onResponse(Call<ApiResponse<PagedResult<OrderResponse>>> call, Response<ApiResponse<PagedResult<OrderResponse>>> response) {
@@ -121,7 +187,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
                 if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
                     ApiResponse<PagedResult<OrderResponse>> apiResponse = response.body();
                     PagedResult<OrderResponse> pagedResult = apiResponse.getData();
-                    
+
                     if (pagedResult != null && pagedResult.getItems() != null) {
                         List<OrderResponse> orderResponses = pagedResult.getItems();
                         Log.d(TAG, "OrderResponses: " + orderResponses.size() + " items");
@@ -207,7 +273,6 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         fragmentTransaction.addToBackStack(null); // Add to back stack to allow return
         fragmentTransaction.commit();
     }
-
 
 
     private void showError(String message) {

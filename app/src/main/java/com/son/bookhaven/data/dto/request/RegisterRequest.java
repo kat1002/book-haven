@@ -7,7 +7,8 @@ public class RegisterRequest {
     private int roleID;
     private String returnUrl;
 
-    public RegisterRequest() {}
+    public RegisterRequest() {
+    }
 
     public RegisterRequest(String fullName, String email, String password, int roleID, String returnUrl) {
         this.fullName = fullName;

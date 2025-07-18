@@ -21,8 +21,6 @@ public class BookVariantResponse {
     private int bookId;
     private int stock;
     private int publicationYear;
-    private int categoryId;
-    private int publisherId;
     private String title;
     private BigDecimal price;
     private int stockQuantity;

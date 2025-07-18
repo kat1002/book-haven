@@ -1,6 +1,5 @@
 package com.son.bookhaven.data.dto.response;
 
-import com.son.bookhaven.data.model.Book;
 import com.son.bookhaven.data.model.BookImage;
 import com.son.bookhaven.data.model.BookVariant;
 
@@ -19,8 +18,10 @@ public class CartItemResponse implements Serializable {
     private Boolean isSelected; // Có thể null theo API, nên dùng Boolean thay vì boolean
 
     private List<String> authorName;
+
     // Constructors
-    public CartItemResponse() {}
+    public CartItemResponse() {
+    }
 
     public CartItemResponse(BookVariant variant, int quantity, boolean isChecked) {
         this.bookId = variant.getBookId();

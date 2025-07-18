@@ -23,7 +23,6 @@ import com.google.android.material.search.SearchView;
 import com.google.android.material.snackbar.Snackbar;
 import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.BookApiService;
 import com.son.bookhaven.apiHelper.BookVariantApiService;
 import com.son.bookhaven.data.adapters.ExploreBookAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
@@ -61,7 +60,6 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
     private List<BookVariant> filteredBookVariants = new ArrayList<>();
 
     // API service
-    private BookApiService bookApiService;
     private BookVariantApiService bookVariantApiService;
 
     // Current filter state
@@ -82,8 +80,6 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_explore, container, false);
 
-        // Initialize API services
-        bookApiService = ApiClient.getClient().create(BookApiService.class);
         bookVariantApiService = ApiClient.getClient().create(BookVariantApiService.class);
 
         // Initialize UI components
@@ -195,8 +191,8 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
             variant.setIsbn(response.getIsbn());
             variant.setPrice(response.getPrice());
             variant.setStock(response.getStock());
-            variant.setCategoryId(response.getCategoryId());
-            variant.setPublisherId(response.getPublisherId());
+            variant.setCategoryId(response.getCategory().getCategoryId());
+            variant.setPublisherId(response.getPublisher().getPublisherId());
             variant.setPublicationYear(response.getPublicationYear());
 
             // Convert language code string to enum
@@ -269,7 +265,7 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
                 this.currentFilterLanguage = LanguageCode.valueOf(languageCode);
             } catch (IllegalArgumentException e) {
                 this.currentFilterLanguage = null;
-                Log.e(TAG, "Invalid language code: " + languageCode);
+                Log.e(TAG, "Invalid language code: " + languageCode, e);
             }
         } else {
             this.currentFilterLanguage = null;
@@ -277,11 +273,20 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
 
         // Apply filters
         applyFilters();
+
+        // Log applied filters for debugging
+        Log.d(TAG, "Filters applied: minPrice=" + minPrice + ", maxPrice=" + maxPrice +
+                ", authorId=" + authorId + ", categoryId=" + categoryId +
+                ", publisherId=" + publisherId + ", language=" + languageCode);
     }
 
     private void applyFilters() {
         // Start with all book variants
         List<BookVariant> result = new ArrayList<>();
+
+        // For debugging
+        int totalCount = allBookVariants.size();
+        int matchedCount = 0;
 
         // Check each variant against the filters
         for (BookVariant variant : allBookVariants) {
@@ -301,29 +306,38 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
 
             // Author filter
             if (currentFilterAuthorId != null && (variant.getAuthors() == null ||
-                    variant.getAuthors().stream().noneMatch(a -> a.getAuthorId() == currentFilterAuthorId))) {
+                    variant.getAuthors().isEmpty() ||
+                    variant.getAuthors().stream().noneMatch(a -> currentFilterAuthorId.equals(a.getAuthorId())))) {
                 variantMatches = false;
             }
 
             // Category filter
-            if (currentFilterCategoryId != null && variant.getCategoryId() != currentFilterCategoryId) {
+            if (currentFilterCategoryId != null &&
+                    currentFilterCategoryId != variant.getCategoryId()) {
                 variantMatches = false;
             }
 
             // Publisher filter
-            if (currentFilterPublisherId != null && variant.getPublisherId() != currentFilterPublisherId) {
+            if (currentFilterPublisherId != null &&
+                    currentFilterPublisherId != variant.getPublisherId()) {
                 variantMatches = false;
             }
 
-            // Language filter
-            if (currentFilterLanguage != null && variant.getLanguage() != currentFilterLanguage) {
+            // Language filter - null-safe comparison
+            if (currentFilterLanguage != null &&
+                    (variant.getLanguage() == null ||
+                            !currentFilterLanguage.equals(variant.getLanguage()))) {
                 variantMatches = false;
             }
 
             if (variantMatches) {
                 result.add(variant);
+                matchedCount++;
             }
         }
+
+        // Log filter results for debugging
+        Log.d(TAG, "Filter results: " + matchedCount + " out of " + totalCount + " books matched");
 
         // Update the filtered variants list and refresh the adapter
         filteredBookVariants = result;

@@ -2,8 +2,6 @@ package com.son.bookhaven.ui.fragments;
 
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,16 +18,22 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.son.bookhaven.R;
-import com.son.bookhaven.data.model.Order;
-import com.son.bookhaven.data.model.OrderDetail;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.OrderService;
 import com.son.bookhaven.data.adapters.OrderDetailItemAdapter;
+import com.son.bookhaven.data.dto.ApiResponse;
+import com.son.bookhaven.data.dto.OrderDetailResponse;
+import com.son.bookhaven.data.dto.OrderResponse;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class OrderDetailFragment extends Fragment {
 
@@ -38,6 +42,7 @@ public class OrderDetailFragment extends Fragment {
 
     private MaterialToolbar toolbar;
     private ProgressBar progressBar;
+    private OrderService orderService;
 
     // Order Summary
     private TextView tvDetailOrderId, tvDetailOrderDate, tvDetailStatus,
@@ -49,7 +54,7 @@ public class OrderDetailFragment extends Fragment {
     // Order Items RecyclerView
     private RecyclerView rvOrderItems;
     private OrderDetailItemAdapter orderDetailItemAdapter;
-    private List<OrderDetail> orderDetailsList;
+    private List<OrderDetailResponse> orderDetailsList;
     private View contentContainer;
 
     // Total Amounts
@@ -95,6 +100,7 @@ public class OrderDetailFragment extends Fragment {
         initViews(view); // Pass the inflated view to initViews
         setupToolbar();
         setupOrderItemsRecyclerView();
+        initializeApiService();
         loadOrderDetail(orderId); // Load the specific order's details
 
         return view;
@@ -147,31 +153,54 @@ public class OrderDetailFragment extends Fragment {
         rvOrderItems.setAdapter(orderDetailItemAdapter);
     }
 
+    private void initializeApiService() {
+        orderService = ApiClient.getClient().create(OrderService.class);
+    }
+
     private void loadOrderDetail(int id) {
         showLoadingState();
 
-        // Simulate fetching order details from a backend/database
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            Order order = getDummyOrderById(id); // Get a dummy order
-
-            if (order != null) {
-                displayOrderDetails(order);
-                showContentState();
-                Log.d(TAG, "Order details loaded for ID: " + id);
-            } else {
-                showErrorState("Order not found.");
-                Log.e(TAG, "Order with ID " + id + " not found.");
+        Call<ApiResponse<OrderResponse>> call = orderService.getOrderById(id);
+        call.enqueue(new Callback<ApiResponse<OrderResponse>>() {
+            @Override
+            public void onResponse(@NonNull Call<ApiResponse<OrderResponse>> call,
+                                   @NonNull Response<ApiResponse<OrderResponse>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    ApiResponse<OrderResponse> apiResponse = response.body();
+                    if (apiResponse.isSuccess() && apiResponse.getData() != null) {
+                        OrderResponse orderResponse = apiResponse.getData();
+                        displayOrderDetails(orderResponse);
+                        showContentState();
+                        Log.d(TAG, "Order details loaded for ID: " + id);
+                    } else {
+                        String errorMessage = apiResponse.getMessage() != null ?
+                                apiResponse.getMessage() : "Failed to load order details.";
+                        showErrorState(errorMessage);
+                        Log.e(TAG, "API Error: " + errorMessage);
+                    }
+                } else {
+                    showErrorState("Failed to load order details. Please try again.");
+                    Log.e(TAG, "HTTP Error: " + response.code() + " " + response.message());
+                }
             }
-        }, 800); // Simulate network delay
+
+            @Override
+            public void onFailure(@NonNull Call<ApiResponse<OrderResponse>> call, @NonNull Throwable t) {
+                showErrorState("Network error. Please check your connection and try again.");
+                Log.e(TAG, "Network Error: ", t);
+            }
+        });
     }
 
-    private void displayOrderDetails(Order order) {
+    private void displayOrderDetails(OrderResponse order) {
         // Order Summary
-        tvDetailOrderId.setText(getString(R.string.order_id_format, order.getOderId()));
-        tvDetailOrderDate.setText(getString(R.string.order_date_format,
-                formatDateTime(order.getOrderDate())));
+        tvDetailOrderId.setText(getString(R.string.order_id_format, order.getOrderId()));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            tvDetailOrderDate.setText(getString(R.string.order_date_format,
+                    formatDateTime(LocalDateTime.parse(order.getOrderDate()))));
+        }
         tvDetailStatus.setText(getString(R.string.order_status_format, order.getStatus()));
-        tvDetailPaymentMethod.setText(getString(R.string.payment_method_format, getPaymentMethodString(order.getPaymentMethod())));
+        tvDetailPaymentMethod.setText(getString(R.string.payment_method_format, getPaymentMethodString((byte) order.getPaymentMethod())));
 
         if (order.getVoucherCode() != null && !order.getVoucherCode().isEmpty()) {
             tvDetailVoucherCode.setVisibility(View.VISIBLE);
@@ -188,18 +217,26 @@ public class OrderDetailFragment extends Fragment {
         }
 
         // Delivery Information
-        // Assume Order has an OrderDeliveryAddress object
-        if (order.getDeliveryAddress() != null) {
+        // Build full delivery address from components
+        String fullAddress = buildDeliveryAddress(order.getStreet(), order.getWard(), order.getDistrict(), order.getCity());
+
+        if (order.getRecipientName() != null && !order.getRecipientName().isEmpty()) {
             tvDetailRecipientName.setText(getString(R.string.recipient_name_format, order.getRecipientName()));
-            tvDetailRecipientPhone.setText(getString(R.string.recipient_phone_format, order.getPhone()));
-            tvDetailDeliveryAddress.setText(getString(R.string.delivery_address_format, order.getDeliveryAddress()));
         } else {
-            // Hide delivery info section or show "Not available"
             tvDetailRecipientName.setText(getString(R.string.recipient_name_format, "N/A"));
-            tvDetailRecipientPhone.setText(getString(R.string.recipient_phone_format, "N/A"));
-            tvDetailDeliveryAddress.setText(getString(R.string.delivery_address_format, "N/A"));
         }
 
+        if (order.getPhoneNumber() != null && !order.getPhoneNumber().isEmpty()) {
+            tvDetailRecipientPhone.setText(getString(R.string.recipient_phone_format, order.getPhoneNumber()));
+        } else {
+            tvDetailRecipientPhone.setText(getString(R.string.recipient_phone_format, "N/A"));
+        }
+
+        if (fullAddress != null && !fullAddress.isEmpty()) {
+            tvDetailDeliveryAddress.setText(getString(R.string.delivery_address_format, fullAddress));
+        } else {
+            tvDetailDeliveryAddress.setText(getString(R.string.delivery_address_format, "N/A"));
+        }
 
         // Order Items
         if (order.getOrderDetails() != null && !order.getOrderDetails().isEmpty()) {
@@ -218,6 +255,31 @@ public class OrderDetailFragment extends Fragment {
 
     }
 
+    private String buildDeliveryAddress(String street, String ward, String district, String city) {
+        StringBuilder address = new StringBuilder();
+
+        if (street != null && !street.trim().isEmpty()) {
+            address.append(street.trim());
+        }
+
+        if (ward != null && !ward.trim().isEmpty()) {
+            if (address.length() > 0) address.append(", ");
+            address.append(ward.trim());
+        }
+
+        if (district != null && !district.trim().isEmpty()) {
+            if (address.length() > 0) address.append(", ");
+            address.append(district.trim());
+        }
+
+        if (city != null && !city.trim().isEmpty()) {
+            if (address.length() > 0) address.append(", ");
+            address.append(city.trim());
+        }
+
+        return address.length() > 0 ? address.toString() : null;
+    }
+
     private String formatDateTime(LocalDateTime dateTime) {
         if (dateTime == null) {
             return "N/A";
@@ -234,11 +296,15 @@ public class OrderDetailFragment extends Fragment {
 
     private String getPaymentMethodString(byte method) {
         switch (method) {
-            case 0: return "Cash on Delivery";
-            case 1: return "Credit Card";
-            case 2: return "Bank Transfer";
+            case 0:
+                return "Cash on Delivery";
+            case 1:
+                return "Credit Card";
+            case 2:
+                return "Bank Transfer";
             // Add more cases as per your payment method byte codes
-            default: return "Unknown";
+            default:
+                return "Unknown";
         }
     }
 
@@ -273,75 +339,5 @@ public class OrderDetailFragment extends Fragment {
         }
     }
 
-    // --- Dummy Data Retrieval (replace with real API/DB call) ---
-    private Order getDummyOrderById(int id) {
-        // This simulates fetching a single order. In a real app, this would be
-        // an API call to get specific order details.
-        // For now, we'll return a hardcoded order based on ID.
-        if (id == 123456) {
 
-            Order order = new Order();
-            order.setCity("Thành phố Hà Nội");
-            order.setDistrict("Quận Ba Đình");
-            order.setWard("Phường Trúc Bạch");
-            order.setStreet("asdfasdf");
-            order.setOderId(123456);
-            order.setUserId(1); // Dummy user ID
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order.setOrderDate(LocalDateTime.now().minusDays(10).minusHours(2));
-            }
-            order.setTotalAmount(175.00);
-            order.setDiscountedPrice(25.00); // 175.00 - 25.00 = 150.00
-            order.setStatus("Delivered");
-            order.setNote("Please deliver after 2 PM.");
-            order.setPaymentMethod((byte) 0); // 0 = Cash on Delivery
-            order.setVoucherCode("SUMMER2025");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order.setCreatedAt(LocalDateTime.now().minusDays(10).minusHours(3));
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order.setUpdatedAt(LocalDateTime.now().minusDays(9));
-            }
-
-            // Order Details (Products)
-            List<OrderDetail> details = new ArrayList<>();
-            details.add(new OrderDetail(1, 123456, 101, "The Great Gatsby", 2, 12.50));
-            details.add(new OrderDetail(2, 123456, 102, "To Kill a Mockingbird", 1, 25.00));
-            details.add(new OrderDetail(3, 123456, 103, "1984", 3, 15.00)); // Total 3 items, price 45
-            order.setOrderDetails(details);
-
-            // Calculate total for dummy data if not already done by constructor/setter in OrderDetail
-            double calculatedTotal = details.stream().mapToDouble(OrderDetail::getSubTotal).sum();
-            // order.setTotalAmount(calculatedTotal); // Ensure consistency if data comes from different sources
-
-            return order;
-        } else if (id == 123457) {
-
-            Order order = new Order();
-            order.setCity("Thành phố Hồ Chí Minh");
-            order.setDistrict("Quận 1");
-            order.setStreet("Phường Bến Nghé");
-            order.setOderId(123457);
-            order.setUserId(1);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order.setOrderDate(LocalDateTime.now().minusDays(5).minusHours(1));
-            }
-            order.setTotalAmount(75.50);
-            order.setDiscountedPrice(0.00);
-            order.setStatus("Shipped");
-            order.setPaymentMethod((byte) 1); // 1 = Credit Card
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order.setCreatedAt(LocalDateTime.now().minusDays(5).minusHours(2));
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                order.setUpdatedAt(LocalDateTime.now().minusDays(4));
-            }
-            List<OrderDetail> details = new ArrayList<>();
-            details.add(new OrderDetail(4, 123457, 201, "The Hobbit", 1, 30.00));
-            details.add(new OrderDetail(5, 123457, 202, "Lord of the Rings", 1, 45.50));
-            order.setOrderDetails(details);
-            return order;
-        }
-        return null; // Order not found
-    }
 }

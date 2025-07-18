@@ -16,12 +16,18 @@ import com.son.bookhaven.R;
 import com.son.bookhaven.data.model.BookImage;
 import com.son.bookhaven.data.model.BookVariant;
 
+import java.text.NumberFormat;
 import java.util.List;
+import java.util.Locale;
+
+import lombok.Setter;
 
 public class FeaturedBooksAdapter extends RecyclerView.Adapter<FeaturedBooksAdapter.FeaturedBookViewHolder> {
 
     private List<BookVariant> bookVariants;
+    @Setter
     private OnBookClickListener onBookClickListener;
+    private final NumberFormat currencyFormatter;
 
     public interface OnBookClickListener {
         void onBookClick(BookVariant variant);
@@ -31,10 +37,8 @@ public class FeaturedBooksAdapter extends RecyclerView.Adapter<FeaturedBooksAdap
 
     public FeaturedBooksAdapter(List<BookVariant> bookVariants) {
         this.bookVariants = bookVariants;
-    }
-
-    public void setOnBookClickListener(OnBookClickListener listener) {
-        this.onBookClickListener = listener;
+        this.currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN")); // Or your desired locale
+        currencyFormatter.setGroupingUsed(true);
     }
 
     public void updateBookVariants(List<BookVariant> newBookVariants) {
@@ -89,7 +93,7 @@ public class FeaturedBooksAdapter extends RecyclerView.Adapter<FeaturedBooksAdap
                 if (position != RecyclerView.NO_POSITION) {
                     BookVariant variant = bookVariants.get(position);
                     if (onBookClickListener != null) {
-                        onBookClickListener.onAddToCartClick(variant);
+                        onBookClickListener.onAddToCartClick(variant);  // This should pass the variant correctly
                     } else {
                         // Default behavior if no listener is set
                         Toast.makeText(v.getContext(),
@@ -112,7 +116,7 @@ public class FeaturedBooksAdapter extends RecyclerView.Adapter<FeaturedBooksAdap
 
             // Safely display price if available
             if (variant.getPrice() != null) {
-                tvPrice.setText(variant.getPrice().toString());
+                tvPrice.setText(currencyFormatter.format(variant.getPrice()));
             } else {
                 tvPrice.setText("N/A");
             }
@@ -125,6 +129,9 @@ public class FeaturedBooksAdapter extends RecyclerView.Adapter<FeaturedBooksAdap
                     imageUrl = bookImage.getImageUrl();
                 }
             }
+
+            boolean hasStock = variant.getStock() > 0;
+            btnAddToCart.setEnabled(hasStock);
 
             loadBookCover(imageUrl);
         }

@@ -3,7 +3,8 @@ package com.son.bookhaven.data.dto.response;
 public class RegisterResponse {
     private String message;
 
-    public RegisterResponse() {}
+    public RegisterResponse() {
+    }
 
     public RegisterResponse(String message) {
         this.message = message;
