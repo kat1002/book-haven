@@ -93,7 +93,7 @@ public class CheckoutFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Initialize formatter and API here
-        currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US); // Or your desired locale
+        currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));// Or your desired locale
         //vnAddressAPI = new VNAddressAPI(); // Initialize the mock API
         if (getArguments() != null && getArguments().containsKey("cart_items")) {
             cartItems = (List<CartItemResponse>) getArguments().getSerializable("cart_items");

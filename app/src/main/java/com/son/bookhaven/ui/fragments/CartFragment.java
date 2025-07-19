@@ -51,23 +51,24 @@ public class CartFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         cartAdapter = new CartAdapter(
-                (item, newQuantity) -> {
-
+                (item, change) -> {
+                    // Calculate new quantity based on change value (+1 or -1)
+                    int newQuantity = item.getQuantity() + change;
+                    // Update the item locally
                     item.setQuantity(newQuantity);
-
+                    // Update the UI
                     updateCartTotals();
-
                     int index = cartItemsList.indexOf(item);
                     if (index != -1) {
                         binding.rvCartItems.getAdapter().notifyItemChanged(index);
                     }
-                    updateCartItemQuantity(item, newQuantity);
+                    // Call API to update server
+                    updateCartItemQuantity(item, change);
                 },
+                // Other callback remains unchanged
                 (item, isChecked) -> {
-
                     item.setIsSelected(isChecked);
                     updateCartTotals();
-
                 }
         );
 
@@ -262,8 +263,8 @@ public class CartFragment extends Fragment {
                 subtotal = subtotal.add(item.getTotalPrice());
             }
         }
-        binding.subtotalText.setText(String.format(Locale.US, "$%.2f", subtotal));
-        binding.totalText.setText(String.format(Locale.US, "$%.2f", subtotal));
+        binding.subtotalText.setText(String.format(new Locale("vi", "VN"), "%,.0f₫", subtotal));
+        binding.totalText.setText(String.format(new Locale("vi", "VN"), "%,.0f₫", subtotal));
 
         // You can add logic for discount, shipping, etc., here if needed
         // binding.discountLayout.setVisibility(discount > 0 ? View.VISIBLE : View.GONE);
@@ -284,7 +285,7 @@ public class CartFragment extends Fragment {
             public void onResponse(Call<Void> call, Response<Void> response) {
                 if (response.isSuccessful()) {
                     Log.d("CartFragment", "Cart item quantity updated successfully");
-                    loadCartItems();
+                    updateCartTotals();
                 } else {
                     Log.e("CartFragment", "Failed to update cart item quantity. Response code: " + response.code());
                     Snackbar.make(binding.getRoot(), "Failed to update cart. Please try again.", Snackbar.LENGTH_SHORT).show();
