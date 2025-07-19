@@ -1,11 +1,13 @@
 package com.son.bookhaven.ui.fragments;
 
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.son.bookhaven.PaymentActivity;
 import com.son.bookhaven.R;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.OrderService;
@@ -24,6 +27,7 @@ import com.son.bookhaven.data.adapters.OrderDetailItemAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.OrderDetailResponse;
 import com.son.bookhaven.data.dto.OrderResponse;
+import com.son.bookhaven.data.dto.response.PaymentLinkInformation;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -58,11 +62,12 @@ public class OrderDetailFragment extends Fragment {
     private View contentContainer;
 
     // Total Amounts
-    private TextView tvDetailTotalAmount, tvDetailDiscountedPrice, tvDetailFinalPayable;
+    private TextView tvDetailTotalAmount, tvDetailDiscountedPrice,tvDetailDiscountedAmount ,tvDetailFinalPayable;
 
     // Timestamps
     private TextView tvDetailCreatedAt, tvDetailUpdatedAt;
-
+    private Button btnCompletePayment;
+    private Long paymentOrderCode;
     private int orderId; // The ID of the order to display
 
     public OrderDetailFragment() {
@@ -130,8 +135,14 @@ public class OrderDetailFragment extends Fragment {
 
         // Total Amounts
         tvDetailTotalAmount = view.findViewById(R.id.tv_detail_total_amount);
+        tvDetailDiscountedAmount =view.findViewById(R.id.tv_detail_discounted_amount);
         tvDetailDiscountedPrice = view.findViewById(R.id.tv_detail_discounted_price);
         tvDetailFinalPayable = view.findViewById(R.id.tv_detail_final_payable);
+
+        btnCompletePayment = view.findViewById(R.id.btn_complete_payment);
+
+        // Set click listener for payment button
+        btnCompletePayment.setOnClickListener(v -> checkAndCompletePayment());
     }
 
     private void setupToolbar() {
@@ -249,10 +260,17 @@ public class OrderDetailFragment extends Fragment {
 
         // Total Amounts
         tvDetailTotalAmount.setText(String.format(Locale.getDefault(), "$%.2f", order.getTotalAmount()));
-        tvDetailDiscountedPrice.setText(String.format(Locale.getDefault(), "-$%.2f", order.getDiscountedPrice()));
+        tvDetailDiscountedAmount.setText(String.format(Locale.getDefault(), "-$%.2f", order.getTotalAmount() - order.getDiscountedPrice()));
+        tvDetailDiscountedPrice.setText(String.format(Locale.getDefault(), "$%.2f", order.getDiscountedPrice()));
         double finalPayable = order.getTotalAmount() - order.getDiscountedPrice();
-        tvDetailFinalPayable.setText(String.format(Locale.getDefault(), "$%.2f", finalPayable));
+        tvDetailFinalPayable.setText(String.format(Locale.getDefault(), "$%.2f", order.getDiscountedPrice()));
 
+        if ("pendingpayment".equalsIgnoreCase(order.getStatus())) {
+            btnCompletePayment.setVisibility(View.VISIBLE);
+            this.paymentOrderCode = order.paymentOrderCode;
+        } else {
+            btnCompletePayment.setVisibility(View.GONE);
+        }
     }
 
     private String buildDeliveryAddress(String street, String ward, String district, String city) {
@@ -297,9 +315,9 @@ public class OrderDetailFragment extends Fragment {
     private String getPaymentMethodString(byte method) {
         switch (method) {
             case 0:
-                return "Cash on Delivery";
+                return "Online Payment";
             case 1:
-                return "Credit Card";
+                return "Cash on Delivery";
             case 2:
                 return "Bank Transfer";
             // Add more cases as per your payment method byte codes
@@ -337,6 +355,61 @@ public class OrderDetailFragment extends Fragment {
         } else {
             requireActivity().onBackPressed();
         }
+    }
+    private void checkAndCompletePayment() {
+        if (paymentOrderCode == null) {
+            Toast.makeText(requireContext(), "Payment information not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        showLoadingState();
+
+        // Call API to check payment status
+        orderService.checkPaymentStatus(paymentOrderCode.toString()).enqueue(new Callback<ApiResponse<PaymentLinkInformation>>() {
+            @Override
+            public void onResponse(@NonNull Call<ApiResponse<PaymentLinkInformation>> call,
+                                   @NonNull Response<ApiResponse<PaymentLinkInformation>> response) {
+                showContentState();
+
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    PaymentLinkInformation paymentInfo = response.body().getData();
+
+                    if (paymentInfo != null && "pending".equalsIgnoreCase(paymentInfo.getStatus())) {
+                        // Launch payment webview
+                        launchPaymentWebview(paymentInfo.getId());
+                    } else {
+                        // Payment already processed
+                        Toast.makeText(requireContext(),
+                                "This payment has already been processed or is no longer valid",
+                                Toast.LENGTH_SHORT).show();
+                        // Refresh order details
+                        loadOrderDetail(orderId);
+                    }
+                } else {
+                    String errorMessage = response.body() != null && response.body().getMessage() != null ?
+                            response.body().getMessage() : "Failed to get payment information";
+                    Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<ApiResponse<PaymentLinkInformation>> call,
+                                  @NonNull Throwable t) {
+                showContentState();
+                Toast.makeText(requireContext(),
+                        "Network error. Please check your connection and try again.",
+                        Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Error checking payment status", t);
+            }
+        });
+    }
+
+    private void launchPaymentWebview(String paymentId) {
+        // Create intent to launch PaymentActivity with the payment URL
+        Intent intent = new Intent(requireContext(), PaymentActivity.class);
+        intent.putExtra("payment_url", "https://pay.payos.vn/web/" + paymentId);
+        intent.putExtra("order_id", orderId);
+        startActivity(intent);
     }
 
 

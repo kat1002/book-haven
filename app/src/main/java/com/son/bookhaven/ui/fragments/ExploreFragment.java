@@ -86,7 +86,7 @@ public class ExploreFragment extends Fragment implements ExploreBookAdapter.OnIt
         searchBar = view.findViewById(R.id.search_bar_explore);
         searchView = view.findViewById(R.id.search_view_explore);
         btnFilter = view.findViewById(R.id.btn_filter);
-        btnCart = view.findViewById(R.id.btn_cart_explore);
+      //  btnCart = view.findViewById(R.id.btn_cart_explore);
         recyclerViewExploreBooks = view.findViewById(R.id.recyclerViewExploreBooks);
         rvExploreSearchResults = view.findViewById(R.id.rv_explore_search_results);
 

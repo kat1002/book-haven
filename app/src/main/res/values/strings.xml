@@ -34,6 +34,7 @@
     <string name="payment_summary">Payment Summary</string>
     <string name="total_amount">Total Amount:</string>
     <string name="discounted_price">Discounted Price:</string>
+    <string name="discounted_amount">Discount:</string>
     <string name="final_payable">Final Payable:</string>
     <string name="timestamps">Timestamps</string>
     <string name="created_at">Created At:</string>
