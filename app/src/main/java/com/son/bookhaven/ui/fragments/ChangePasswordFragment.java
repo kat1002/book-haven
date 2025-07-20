@@ -1,4 +1,4 @@
-package com.son.bookhaven.ui.fragments; // Adjust your package name
+package com.son.bookhaven.ui.fragments;
 
 import android.os.Bundle;
 import android.text.Editable;
@@ -16,11 +16,22 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.son.bookhaven.R;
+import com.son.bookhaven.apiHelper.ApiClient;
+import com.son.bookhaven.apiHelper.AccountApiService;
+import com.son.bookhaven.authService.TokenManager;
+import com.son.bookhaven.data.dto.request.ChangePasswordRequest;
+import com.son.bookhaven.data.dto.ApiResponse;
 
 import java.util.regex.Pattern;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ChangePasswordFragment extends Fragment {
 
@@ -30,15 +41,19 @@ public class ChangePasswordFragment extends Fragment {
     private TextInputLayout tilCurrentPassword, tilNewPassword, tilConfirmNewPassword;
     private TextInputEditText etCurrentPassword, etNewPassword, etConfirmNewPassword;
     private MaterialButton btnChangePasswordSubmit;
+    private CircularProgressIndicator progressIndicator;
+
+    private TokenManager tokenManager;
+
+    private AccountApiService apiService;
 
     // Regex for strong password:
     // At least 8 characters long
     // Contains at least one uppercase letter (A-Z)
     // Contains at least one lowercase letter (a-z)
     // Contains at least one digit (0-9)
-    // Contains at least one special character (!@#$%^&*()_+-=[]{};':"|,.<>/?`~)
-    private static final Pattern PASSWORD_PATTERN =
-            Pattern.compile("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,32}$");
+//    private static final Pattern PASSWORD_PATTERN =
+//            Pattern.compile("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,32}$");
 
     public ChangePasswordFragment() {
         // Required empty public constructor
@@ -50,9 +65,10 @@ public class ChangePasswordFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_change_password, container, false);
 
         initViews(view);
+        setupApiService();
         setupToolbar();
         setupClickListeners();
-        setupRealtimeValidation(); // <--- This line enables realtime checking
+        setupRealtimeValidation();
 
         return view;
     }
@@ -66,6 +82,13 @@ public class ChangePasswordFragment extends Fragment {
         tilConfirmNewPassword = view.findViewById(R.id.til_confirm_new_password);
         etConfirmNewPassword = view.findViewById(R.id.et_confirm_new_password);
         btnChangePasswordSubmit = view.findViewById(R.id.btn_change_password_submit);
+        progressIndicator = view.findViewById(R.id.progress_indicator);
+
+        tokenManager = new TokenManager(requireContext());
+    }
+
+    private void setupApiService() {
+        apiService = ApiClient.getClient().create(AccountApiService.class);
     }
 
     private void setupToolbar() {
@@ -84,17 +107,14 @@ public class ChangePasswordFragment extends Fragment {
         btnChangePasswordSubmit.setOnClickListener(v -> handleChangePassword());
     }
 
-    // --- Realtime Validation Setup ---
     private void setupRealtimeValidation() {
         // TextWatcher for Current Password field
         etCurrentPassword.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -105,12 +125,10 @@ public class ChangePasswordFragment extends Fragment {
         // TextWatcher for New Password field
         etNewPassword.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -123,12 +141,10 @@ public class ChangePasswordFragment extends Fragment {
         // TextWatcher for Confirm New Password field
         etConfirmNewPassword.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -137,117 +153,184 @@ public class ChangePasswordFragment extends Fragment {
         });
     }
 
-    // --- Individual Validation Methods for Realtime Check ---
-    // These methods are called by the TextWatchers as the user types
     private boolean validateCurrentPassword(String password) {
         if (TextUtils.isEmpty(password)) {
-            tilCurrentPassword.setError("Current password cannot be empty");
+            tilCurrentPassword.setError("Mật khẩu hiện tại không được để trống");
             return false;
         } else {
-            tilCurrentPassword.setError(null); // Clear error if valid
+            tilCurrentPassword.setError(null);
             return true;
         }
     }
 
     private boolean validateNewPassword(String password) {
-        String currentPassword = etCurrentPassword.getText().toString().trim();
+        String currentPassword = etCurrentPassword.getText() != null ?
+                etCurrentPassword.getText().toString().trim() : "";
+
         if (TextUtils.isEmpty(password)) {
-            tilNewPassword.setError("New password cannot be empty");
+            tilNewPassword.setError("Mật khẩu mới không được để trống");
             return false;
-        } else if (password.length() < 8) {
-            tilNewPassword.setError("New password must be at least 8 characters long");
-            return false;
-        } else if (!PASSWORD_PATTERN.matcher(password).matches()) {
-            tilNewPassword.setError("New password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.");
+        } else if (password.length() < 6) {
+            tilNewPassword.setError("Mật khẩu mới phải có ít nhất 6 ký tự");
             return false;
         } else if (password.equals(currentPassword) && !TextUtils.isEmpty(currentPassword)) {
-            // Only show this error if current password field is not empty itself
-            tilNewPassword.setError("New password cannot be the same as the current password.");
+            tilNewPassword.setError("Mật khẩu mới không thể giống mật khẩu hiện tại");
             return false;
         } else {
-            tilNewPassword.setError(null); // Clear error if valid
+            tilNewPassword.setError(null);
             return true;
         }
     }
 
     private boolean validateConfirmNewPassword(String confirmPassword) {
-        String newPassword = etNewPassword.getText().toString().trim(); // Get current new password value
+        String newPassword = etNewPassword.getText().toString().trim();
         if (TextUtils.isEmpty(confirmPassword)) {
-            tilConfirmNewPassword.setError("Confirm new password cannot be empty");
+            tilConfirmNewPassword.setError("Xác nhận mật khẩu không được để trống");
             return false;
         } else if (!newPassword.equals(confirmPassword)) {
-            tilConfirmNewPassword.setError("New passwords do not match");
+            tilConfirmNewPassword.setError("Mật khẩu xác nhận không khớp");
             return false;
         } else {
-            tilConfirmNewPassword.setError(null); // Clear error if valid
+            tilConfirmNewPassword.setError(null);
             return true;
         }
     }
 
-
-    // --- Final Validation on Button Click (still needed!) ---
     private void handleChangePassword() {
-        // Trigger all validations one last time to ensure all fields are checked
-        // This is important because a user might skip a field or leave an error uncorrected
+        // Final validation
         boolean isCurrentPasswordValid = validateCurrentPassword(etCurrentPassword.getText().toString().trim());
         boolean isNewPasswordValid = validateNewPassword(etNewPassword.getText().toString().trim());
         boolean isConfirmNewPasswordValid = validateConfirmNewPassword(etConfirmNewPassword.getText().toString().trim());
 
         boolean allFieldsValid = isCurrentPasswordValid && isNewPasswordValid && isConfirmNewPasswordValid;
 
-        if (allFieldsValid) {
-            Log.d(TAG, "Client-side validation passed. Attempting to change password...");
+        if (!allFieldsValid) {
+            showErrorMessage("Vui lòng sửa các lỗi trước khi tiếp tục");
+            return;
+        }
 
-            String currentPassword = etCurrentPassword.getText().toString().trim();
-            String newPassword = etNewPassword.getText().toString().trim();
+        // Show loading state
+        setLoadingState(true);
 
-            // --- Server-side Verification and Update ---
-            // THIS IS THE CRUCIAL PART FOR REAL SECURITY
-            // In a real application, you would send the 'currentPassword' and 'newPassword'
-            // to your authentication service or backend API.
+        String currentPassword = etCurrentPassword.getText().toString().trim();
+        String newPassword = etNewPassword.getText().toString().trim();
 
-            // The backend would then:
-            // 1. Verify the 'currentPassword' against the user's stored (hashed) password.
-            //    This prevents unauthorized password changes even if someone gains temporary access to the device.
-            // 2. If current password is correct, hash the 'newPassword'.
-            // 3. Update the user's password in the database with the new hashed password.
-            // 4. Respond with success or failure.
+        // Create request
+        ChangePasswordRequest request = new ChangePasswordRequest(currentPassword, newPassword);
 
-            // --- Placeholder for API Call ---
-            // Example using a fictitious service call:
-            // AuthService.getInstance().changePassword(currentPassword, newPassword, new Callback() {
-            //     @Override
-            //     public void onSuccess() {
-            //         Toast.makeText(getContext(), "Password changed successfully!", Toast.LENGTH_SHORT).show();
-            //         // After successful change, navigate back
-            //         if (getParentFragmentManager().getBackStackEntryCount() > 0) {
-            //             getParentFragmentManager().popBackStack();
-            //         } else {
-            //             requireActivity().onBackPressed();
-            //         }
-            //     }
-            //
-            //     @Override
-            //     public void onFailure(String errorMessage) {
-            //         Toast.makeText(getContext(), "Failed to change password: " + errorMessage, Toast.LENGTH_LONG).show();
-            //         // Optionally set error on current password field if it was incorrect
-            //         tilCurrentPassword.setError("Incorrect current password or other error.");
-            //     }
-            // });
+        // Get auth token
+        String authToken = tokenManager.getToken();
 
-            // --- SIMULATION of successful password change for now ---
-            Toast.makeText(getContext(), "Password changed successfully! (Server call simulated)", Toast.LENGTH_SHORT).show();
+        // Make API call
+        Call<ApiResponse> call = apiService.changePassword("Bearer " + authToken, request);
+        call.enqueue(new Callback<ApiResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<ApiResponse> call, @NonNull Response<ApiResponse> response) {
+                setLoadingState(false);
 
-            // After simulated successful change, navigate back
-            if (getParentFragmentManager().getBackStackEntryCount() > 0) {
-                getParentFragmentManager().popBackStack();
-            } else {
-                requireActivity().onBackPressed();
+                if (response.isSuccessful() && response.body() != null) {
+                    ApiResponse apiResponse = response.body();
+                    showSuccessMessage(apiResponse.getMessage());
+
+                    // Clear all fields after successful password change
+                    etCurrentPassword.setText("");
+                    etNewPassword.setText("");
+                    etConfirmNewPassword.setText("");
+
+                    // Navigate back after showing success message
+                    etCurrentPassword.postDelayed(() -> {
+                        if (getParentFragmentManager().getBackStackEntryCount() > 0) {
+                            getParentFragmentManager().popBackStack();
+                        } else {
+                            requireActivity().onBackPressed();
+                        }
+                    }, 2000);
+
+                } else {
+                    handleApiError(response);
+                }
             }
 
-        } else {
-            // Client-side validation failed
-            Toast.makeText(getContext(), "Please correct the errors before submitting.", Toast.LENGTH_SHORT).show();
+            @Override
+            public void onFailure(@NonNull Call<ApiResponse> call, @NonNull Throwable t) {
+                setLoadingState(false);
+                Log.e(TAG, "Network error during change password request", t);
+                showErrorMessage("Không thể kết nối đến server. Vui lòng kiểm tra kết nối internet và thử lại.");
+            }
+        });
+    }
+
+    private void handleApiError(Response<ApiResponse> response) {
+        try {
+            String errorMessage = "Có lỗi xảy ra. Vui lòng thử lại.";
+
+            if (response.code() == 400) {
+                errorMessage = "Mật khẩu hiện tại không đúng";
+                tilCurrentPassword.setError("Mật khẩu hiện tại không đúng");
+            } else if (response.code() == 401) {
+                errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+                // Handle session expiry - navigate to login
+                handleSessionExpired();
+                return;
+            }
+
+            if (response.errorBody() != null) {
+                String errorBody = response.errorBody().string();
+                Log.e(TAG, "API error response: " + errorBody);
+
+            }
+
+            showErrorMessage(errorMessage);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling API error response", e);
+            showErrorMessage("Có lỗi xảy ra. Vui lòng thử lại.");
         }
+    }
+
+    private void handleSessionExpired() {
+        // Clear stored auth token
+        tokenManager.clearUserData();
+
+        // Navigate to login screen
+        // You'll need to implement this based on your navigation structure
+        Toast.makeText(requireContext(), "Phiên đăng nhập đã hết hạn", Toast.LENGTH_SHORT).show();
+
+    }
+
+    private void setLoadingState(boolean isLoading) {
+        if (isLoading) {
+            btnChangePasswordSubmit.setEnabled(false);
+            btnChangePasswordSubmit.setText("Đang xử lý...");
+            progressIndicator.setVisibility(View.VISIBLE);
+            etCurrentPassword.setEnabled(false);
+            etNewPassword.setEnabled(false);
+            etConfirmNewPassword.setEnabled(false);
+        } else {
+            btnChangePasswordSubmit.setEnabled(true);
+            btnChangePasswordSubmit.setText("Đổi mật khẩu");
+            progressIndicator.setVisibility(View.GONE);
+            etCurrentPassword.setEnabled(true);
+            etNewPassword.setEnabled(true);
+            etConfirmNewPassword.setEnabled(true);
+        }
+    }
+
+    private void showSuccessMessage(String message) {
+        if (TextUtils.isEmpty(message)) {
+            message = "Đổi mật khẩu thành công!";
+        }
+
+        Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG)
+                .setBackgroundTint(getResources().getColor(R.color.md_theme_primary, null))
+                .setTextColor(getResources().getColor(android.R.color.white, null))
+                .show();
+    }
+
+    private void showErrorMessage(String message) {
+        Snackbar.make(requireView(), message, Snackbar.LENGTH_LONG)
+                .setBackgroundTint(getResources().getColor(R.color.md_theme_error, null))
+                .setTextColor(getResources().getColor(android.R.color.white, null))
+                .show();
     }
 }

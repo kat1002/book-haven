@@ -331,9 +331,22 @@ public class ProfileFragment extends Fragment {
         });
 
         layoutAppSettings.setOnClickListener(v -> navigateToAppSettings());
-        layoutPrivacySecurity.setOnClickListener(v -> showToast("Privacy & Security clicked"));
-        layoutHelpSupport.setOnClickListener(v -> showToast("Help & Support clicked"));
+        layoutPrivacySecurity.setOnClickListener(v ->
+                navigateToFragment(new PrivacySecurityFragment()));
+
+        layoutHelpSupport.setOnClickListener(v ->
+                navigateToFragment(new HelpSupportFragment()));
+
     }
+
+    private void navigateToFragment(Fragment fragment) {
+        if (getActivity() != null && isAdded()) {
+            getParentFragmentManager().beginTransaction()
+                    .replace(R.id.frame_layout, fragment)
+                    .commitAllowingStateLoss();
+        }
+    }
+
 
     // Navigation methods
     private void navigateToAppSettings() {

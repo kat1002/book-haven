@@ -204,7 +204,11 @@ public class LoginFragment extends Fragment {
 
     private void handleForgotPassword() {
         Toast.makeText(getContext(), "Forgot Password clicked!", Toast.LENGTH_SHORT).show();
-        // Navigate to forgot password fragment
+        if (getActivity() != null && isAdded()) {
+            getParentFragmentManager().beginTransaction()
+                    .replace(R.id.frame_layout, new ForgotPasswordFragment())
+                    .commitAllowingStateLoss();
+        }
     }
 
     private void handleSignUp() {
