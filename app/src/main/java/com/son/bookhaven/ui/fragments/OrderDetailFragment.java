@@ -29,6 +29,7 @@ import com.son.bookhaven.data.dto.OrderDetailResponse;
 import com.son.bookhaven.data.dto.OrderResponse;
 import com.son.bookhaven.data.dto.response.PaymentLinkInformation;
 
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -258,12 +259,14 @@ public class OrderDetailFragment extends Fragment {
             // Optionally, show a text indicating "No items in this order"
         }
 
-        // Total Amounts
-        tvDetailTotalAmount.setText(String.format(Locale.getDefault(), "$%.2f", order.getTotalAmount()));
-        tvDetailDiscountedAmount.setText(String.format(Locale.getDefault(), "-$%.2f", order.getTotalAmount() - order.getDiscountedPrice()));
-        tvDetailDiscountedPrice.setText(String.format(Locale.getDefault(), "$%.2f", order.getDiscountedPrice()));
-        double finalPayable = order.getTotalAmount() - order.getDiscountedPrice();
-        tvDetailFinalPayable.setText(String.format(Locale.getDefault(), "$%.2f", order.getDiscountedPrice()));
+        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+        currencyFormatter.setMaximumFractionDigits(0); // No decimal places for VND
+
+        tvDetailTotalAmount.setText(currencyFormatter.format(order.getTotalAmount()));
+        tvDetailDiscountedAmount.setText("-" + currencyFormatter.format(order.getTotalAmount() - order.getDiscountedPrice()));
+        tvDetailDiscountedPrice.setText(currencyFormatter.format(order.getDiscountedPrice()));
+        double finalPayable = order.getDiscountedPrice(); // Note: this appears to already be the final price
+        tvDetailFinalPayable.setText(currencyFormatter.format(finalPayable));
 
         if ("pendingpayment".equalsIgnoreCase(order.getStatus())) {
             btnCompletePayment.setVisibility(View.VISIBLE);

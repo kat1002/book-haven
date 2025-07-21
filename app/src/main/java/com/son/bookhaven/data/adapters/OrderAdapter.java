@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.son.bookhaven.R;
 import com.son.bookhaven.data.dto.OrderResponse;
 
+import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 
@@ -71,7 +72,9 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         }
 
         // Display total amount (consider formatting for currency)
-        holder.tvTotalAmount.setText(String.format(Locale.getDefault(), "$%.2f", order.getTotalAmount()));
+        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+        currencyFormatter.setMaximumFractionDigits(0); // No decimal places for VND
+        holder.tvTotalAmount.setText(currencyFormatter.format(order.getDiscountedPrice()));
 
         // Order Status
         holder.tvOrderStatus.setText(order.getStatus());

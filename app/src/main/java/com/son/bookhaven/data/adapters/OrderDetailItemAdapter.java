@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.son.bookhaven.R;
 import com.son.bookhaven.data.dto.OrderDetailResponse;
 
+import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 
@@ -33,11 +34,12 @@ public class OrderDetailItemAdapter extends RecyclerView.Adapter<OrderDetailItem
     @Override
     public void onBindViewHolder(@NonNull OrderDetailItemViewHolder holder, int position) {
         OrderDetailResponse item = orderDetailsList.get(position);
-
+        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
+        currencyFormatter.setMaximumFractionDigits(0); // No decimal places for VND
         holder.tvProductName.setText(item.getTitle());
         holder.tvProductQuantity.setText("x" + item.getQuantity());
-        holder.tvPricePerUnit.setText(String.format(Locale.getDefault(), "$%.2f / item", item.getUnitPrice()));
-        holder.tvItemSubtotal.setText(String.format(Locale.getDefault(), "$%.2f", item.getSubtotal()));
+        holder.tvPricePerUnit.setText(currencyFormatter.format(item.getUnitPrice()) + " / item");
+        holder.tvItemSubtotal.setText(currencyFormatter.format(item.getSubtotal()));
     }
 
     @Override

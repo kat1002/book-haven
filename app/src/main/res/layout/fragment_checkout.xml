@@ -288,6 +288,40 @@
                 android:layout_marginTop="8dp"
                 tools:listitem="@layout/cart_item_checkout" />
 
+            <!-- Voucher Section -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/textViewVoucherTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Apply Voucher"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="16dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/recyclerViewCartItems"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/textInputLayoutVoucher"
+                style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                android:hint="Select a voucher (optional)"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textViewVoucherTitle">
+
+                <AutoCompleteTextView
+                    android:id="@+id/autoCompleteTextViewVoucher"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 
@@ -369,6 +403,26 @@
                 app:layout_constraintTop_toTopOf="@+id/textViewShippingLabel"
                 app:layout_constraintBottom_toBottomOf="@+id/textViewShippingLabel"
                 tools:text="$5.00"/>
+            <!-- Discount (Add this after shipping and before divider) -->
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/textViewDiscountLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Discount:"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:layout_marginTop="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/textViewShippingLabel"/>
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/textViewDiscountValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/textViewDiscountLabel"
+                app:layout_constraintBottom_toBottomOf="@+id/textViewDiscountLabel"
+                android:text="0 VND"/>
 
             <!-- Divider -->
             <View
@@ -379,7 +433,7 @@
                 android:layout_marginTop="16dp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/textViewShippingLabel"/>
+                app:layout_constraintTop_toBottomOf="@+id/textViewDiscountLabel"/>
 
             <!-- Total -->
             <com.google.android.material.textview.MaterialTextView
