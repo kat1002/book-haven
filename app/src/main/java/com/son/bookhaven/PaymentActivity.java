@@ -52,8 +52,8 @@ public class PaymentActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> {
             // Show confirmation dialog before allowing user to cancel payment
             new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Cancel Payment")
-                    .setMessage("Are you sure you want to cancel this payment?")
+                    .setTitle("Back to Book Haven")
+                    .setMessage("Are you sure you want to return back to BookHeaven and pending this payment?")
                     .setPositiveButton("Yes", (dialog, which) -> {
                         finish(); // Close activity and return to previous screen
                     })

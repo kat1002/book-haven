@@ -216,23 +216,11 @@ public class MainActivity extends AppCompatActivity {
             // Clear the flag
             prefs.edit().putBoolean("payment_in_progress", false).apply();
 
-            // Show dialog to check payment status
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Payment Status")
-                    .setMessage("Did you complete your payment?")
-                    .setPositiveButton("Yes, payment completed", (dialog, which) -> {
-                        // Clear cart
-                        clearCart();
+            clearCart();
 
-                        // Navigate to OrderHistoryFragment
-                        replaceFragment(new OrderHistoryFragment());
-                    })
-                    .setNegativeButton("No, payment cancelled", (dialog, which) -> {
-                        // Do nothing, stay on current screen
-                        dialog.dismiss();
-                    })
-                    .setCancelable(false)
-                    .show();
+            // Navigate to OrderHistoryFragment
+            replaceFragment(new OrderHistoryFragment());
+            bottomNavigationView.getMenu().findItem(R.id.nav_profile).setChecked(true);
         }
     }
 

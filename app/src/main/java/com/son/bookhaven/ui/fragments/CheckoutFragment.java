@@ -429,8 +429,8 @@ public class CheckoutFragment extends Fragment {
         if (phoneNumber.isEmpty()) {
             textInputLayoutPhone.setError("Phone number is required");
             isValid = false;
-        } else if (phoneNumber.length() < 10 || phoneNumber.length() > 15) {
-            textInputLayoutPhone.setError("Phone number must be between 10 and 15 digits");
+        } else if (!phoneNumber.matches("^0\\d{9}$")) {
+            textInputLayoutPhone.setError("Please enter a valid Vietnamese phone number");
             isValid = false;
         } else {
             textInputLayoutPhone.setError(null);
