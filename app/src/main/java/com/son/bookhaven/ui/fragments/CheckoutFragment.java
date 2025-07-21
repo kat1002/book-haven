@@ -31,16 +31,21 @@ import com.son.bookhaven.apiHelper.AddressApiClient;
 import com.son.bookhaven.apiHelper.AddressApiService;
 import com.son.bookhaven.apiHelper.ApiClient;
 import com.son.bookhaven.apiHelper.CheckOutService;
+import com.son.bookhaven.apiHelper.VoucherApiService;
 import com.son.bookhaven.data.adapters.CartItemAdapter;
+import com.son.bookhaven.data.adapters.VoucherAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.request.CheckOutRequest;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
 import com.son.bookhaven.data.dto.response.CheckOutResponse;
 import com.son.bookhaven.data.dto.response.DistrictResponse;
 import com.son.bookhaven.data.dto.response.ProvinceResponse;
+import com.son.bookhaven.data.dto.response.ValidVouchersResponse;
+import com.son.bookhaven.data.dto.response.VoucherResponse;
 import com.son.bookhaven.data.dto.response.WardResponse;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -83,7 +88,13 @@ public class CheckoutFragment extends Fragment {
     private TextInputLayout textInputLayoutNote;
 
     private NumberFormat currencyFormatter;
-    private final BigDecimal SHIPPING_COST = new BigDecimal("5.00"); // Example fixed shipping cost
+    private TextInputLayout textInputLayoutVoucher;
+    private AutoCompleteTextView autoCompleteTextViewVoucher;
+    private MaterialTextView textViewDiscountValue;
+    private List<VoucherResponse> validVouchers = new ArrayList<>();
+    private VoucherResponse selectedVoucher;
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
 
     public CheckoutFragment() {
         // Required empty public constructor
@@ -130,7 +141,9 @@ public class CheckoutFragment extends Fragment {
         textInputEditTextStreet = view.findViewById(R.id.textInputEditTextStreet);
         textInputLayoutNote = view.findViewById(R.id.textInputLayoutNote);
         textInputEditTextNote = view.findViewById(R.id.textInputEditTextNote);
-
+        textInputLayoutVoucher = view.findViewById(R.id.textInputLayoutVoucher);
+        autoCompleteTextViewVoucher = view.findViewById(R.id.autoCompleteTextViewVoucher);
+        textViewDiscountValue = view.findViewById(R.id.textViewDiscountValue);
         return view;
     }
 
@@ -155,7 +168,7 @@ public class CheckoutFragment extends Fragment {
 
         updateOrderSummary();
         setupAddressSelection();
-
+        loadValidVouchers();
 
         buttonPlaceOrder.setOnClickListener(v -> {
             if (validateInputs()) {
@@ -167,6 +180,87 @@ public class CheckoutFragment extends Fragment {
 
     }
 
+    private BigDecimal calculateSubtotal() {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        for (CartItemResponse item : cartItems) {
+            subtotal = subtotal.add(item.getTotalPrice());
+        }
+        return subtotal;
+    }
+    private void loadValidVouchers() {
+        // Calculate the current order total
+        final BigDecimal subtotalFinal = calculateSubtotal();
+
+        showLoading(true);
+
+        // Create voucher service
+        VoucherApiService voucherApiService = ApiClient.getAuthenticatedClient(requireContext())
+                .create(VoucherApiService.class);
+
+        // Call API to get valid vouchers
+        voucherApiService.getValidVouchers(subtotalFinal)
+                .enqueue(new Callback<ApiResponse<ValidVouchersResponse>>() {
+                    @Override
+                    public void onResponse(Call<ApiResponse<ValidVouchersResponse>> call,
+                                           Response<ApiResponse<ValidVouchersResponse>> response) {
+                        showLoading(false);
+
+                        if (response.isSuccessful() && response.body() != null &&
+                                response.body().isSuccess() && response.body().getData() != null) {
+
+                            validVouchers = response.body().getData().getValidVouchers();
+
+                            // Add a "No voucher" option at the beginning
+                            VoucherResponse noVoucher = new VoucherResponse();
+                            noVoucher.setCode("No voucher");
+                            noVoucher.setDiscountValue(BigDecimal.ZERO);
+                            List<VoucherResponse> voucherOptions = new ArrayList<>();
+                            voucherOptions.add(noVoucher);
+                            voucherOptions.addAll(validVouchers);
+
+                            // Create and set adapter
+                            VoucherAdapter voucherAdapter = new VoucherAdapter(requireContext(), voucherOptions);
+
+                            autoCompleteTextViewVoucher.setAdapter(voucherAdapter);
+
+                            // Handle voucher selection
+                            autoCompleteTextViewVoucher.setOnItemClickListener((parent, view, position, id) -> {
+                                VoucherResponse selectedItem = (VoucherResponse) parent.getItemAtPosition(position);
+                                if ("No voucher".equals(selectedItem.getCode())) {
+                                    selectedVoucher = null;
+                                    discountAmount = BigDecimal.ZERO;
+                                } else {
+                                    selectedVoucher = selectedItem;
+                                    if (selectedVoucher.isPercentageDiscount()) {
+                                        BigDecimal percentage = selectedVoucher.getDiscountValue().divide(
+                                                new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                                        discountAmount = subtotalFinal.multiply(percentage);
+                                    } else {
+                                        discountAmount = selectedVoucher.getDiscountValue();
+                                    }
+                                }
+                                updateOrderSummary();
+                            });
+
+                            // Select "No voucher" by default
+                            autoCompleteTextViewVoucher.setText("No voucher", false);
+
+                        } else {
+                            // Handle error
+                            String errorMsg = response.body() != null ?
+                                    response.body().getMessage() : "Failed to load vouchers";
+                            Snackbar.make(requireView(), errorMsg, Snackbar.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<ApiResponse<ValidVouchersResponse>> call, Throwable t) {
+                        showLoading(false);
+                        Snackbar.make(requireView(),
+                                "Network error: " + t.getMessage(), Snackbar.LENGTH_SHORT).show();
+                    }
+                });
+    }
 
     private void setupAddressSelection() {
         // Show loading for provinces
@@ -299,11 +393,20 @@ public class CheckoutFragment extends Fragment {
         for (CartItemResponse item : cartItems) {
             subtotal = subtotal.add(item.getTotalPrice());
         }
+        // Show discount
+        textViewDiscountValue.setText(currencyFormatter.format(discountAmount));
 
-        BigDecimal total = subtotal.add(SHIPPING_COST);
+        // Calculate total with discount
+        BigDecimal total = subtotal.subtract(discountAmount);
+
+        // Ensure total doesn't go below zero
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            total = BigDecimal.ZERO;
+        }
+
 
         textViewSubtotalValue.setText(currencyFormatter.format(subtotal));
-        textViewShippingValue.setText(currencyFormatter.format(SHIPPING_COST));
+        textViewShippingValue.setText("Miễn phí"); // Assuming free shipping for simplicity
         textViewTotalValue.setText(currencyFormatter.format(total));
     }
 
@@ -393,13 +496,13 @@ public class CheckoutFragment extends Fragment {
         for (CartItemResponse item : cartItems) {
             subtotal = subtotal.add(item.getTotalPrice());
         }
-        BigDecimal total = subtotal.add(SHIPPING_COST);
-        String formattedTotal = currencyFormatter.format(total);
+        subtotal.subtract(discountAmount);
+        String formattedTotal = currencyFormatter.format(subtotal);
 
         // Create an AlertDialog
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setTitle("Confirm Order")
-                .setMessage("Are you sure you want to place this order for " + formattedTotal + "?")
+                .setMessage("Are you sure you want to place this order?")
                 .setPositiveButton("Yes, Place Order", (dialog, which) -> {
                     // User confirmed, proceed with order processing
                     processOrder();
@@ -438,7 +541,9 @@ public class CheckoutFragment extends Fragment {
         checkoutRequest.setStreet(street);
         checkoutRequest.setDistrict(district);
         checkoutRequest.setEmail(email);
-
+        if (selectedVoucher != null) {
+            checkoutRequest.setVoucherCode(selectedVoucher.getCode());
+        }
         // Extract cart item IDs
         List<Integer> cartItemIds = new ArrayList<>();
         for (CartItemResponse item : cartItems) {
@@ -501,8 +606,8 @@ public class CheckoutFragment extends Fragment {
                                     for (CartItemResponse item : cartItems) {
                                         subtotal = subtotal.add(item.getTotalPrice());
                                     }
-                                    BigDecimal total = subtotal.add(SHIPPING_COST);
-                                    args.putDouble("total_amount", total.doubleValue());
+
+                                    args.putDouble("total_amount", subtotal.doubleValue());
 
                                     confirmationFragment.setArguments(args);
 

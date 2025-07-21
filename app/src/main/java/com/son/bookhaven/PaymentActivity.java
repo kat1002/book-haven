@@ -174,7 +174,7 @@ public class PaymentActivity extends AppCompatActivity {
                                 isSuccess,
                                 orderDetails.orderId,
                                 paymentCode,
-                                orderDetails.totalAmount,
+                                orderDetails.discountedPrice,
                                 orderDetails.recipientName,
                                 orderDetails.phoneNumber,
                                 orderDetails.city,
