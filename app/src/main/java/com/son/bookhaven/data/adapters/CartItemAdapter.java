@@ -23,7 +23,7 @@ public class CartItemAdapter extends RecyclerView.Adapter<CartItemAdapter.ViewHo
 
     public CartItemAdapter(List<CartItemResponse> cartItems) {
         this.cartItems = cartItems;
-        this.currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US); // Or your desired locale
+        this.currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN")); // Or your desired locale
     }
 
     @NonNull
