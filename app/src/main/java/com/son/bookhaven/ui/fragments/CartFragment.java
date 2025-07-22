@@ -13,8 +13,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.son.bookhaven.MainActivity;
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.CartApiService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.CartApiService;
 import com.son.bookhaven.data.adapters.CartAdapter;
 import com.son.bookhaven.data.dto.request.CartItemUpdateRequest;
 import com.son.bookhaven.data.dto.request.RemoveCartItemsRequest;

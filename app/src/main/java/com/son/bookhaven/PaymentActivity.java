@@ -15,8 +15,8 @@ import android.widget.ProgressBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.OrderService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.OrderService;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.OrderResponse;
 import com.son.bookhaven.ui.fragments.OrderConfirmationFragment;
@@ -52,8 +52,8 @@ public class PaymentActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> {
             // Show confirmation dialog before allowing user to cancel payment
             new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Cancel Payment")
-                    .setMessage("Are you sure you want to cancel this payment?")
+                    .setTitle("Back to Book Haven")
+                    .setMessage("Are you sure you want to return back to BookHeaven and pending this payment?")
                     .setPositiveButton("Yes", (dialog, which) -> {
                         finish(); // Close activity and return to previous screen
                     })

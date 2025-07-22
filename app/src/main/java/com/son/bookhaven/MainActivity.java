@@ -18,8 +18,8 @@ import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 import com.google.android.material.snackbar.Snackbar;
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.CartApiService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.CartApiService;
 import com.son.bookhaven.data.dto.response.CartItemResponse;
 import com.son.bookhaven.ui.fragments.CartFragment;
 import com.son.bookhaven.ui.fragments.ExploreFragment;
@@ -216,23 +216,11 @@ public class MainActivity extends AppCompatActivity {
             // Clear the flag
             prefs.edit().putBoolean("payment_in_progress", false).apply();
 
-            // Show dialog to check payment status
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Payment Status")
-                    .setMessage("Did you complete your payment?")
-                    .setPositiveButton("Yes, payment completed", (dialog, which) -> {
-                        // Clear cart
-                        clearCart();
+            clearCart();
 
-                        // Navigate to OrderHistoryFragment
-                        replaceFragment(new OrderHistoryFragment());
-                    })
-                    .setNegativeButton("No, payment cancelled", (dialog, which) -> {
-                        // Do nothing, stay on current screen
-                        dialog.dismiss();
-                    })
-                    .setCancelable(false)
-                    .show();
+            // Navigate to OrderHistoryFragment
+            replaceFragment(new OrderHistoryFragment());
+            bottomNavigationView.getMenu().findItem(R.id.nav_profile).setChecked(true);
         }
     }
 

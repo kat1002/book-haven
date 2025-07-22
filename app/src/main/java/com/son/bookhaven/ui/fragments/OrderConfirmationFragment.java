@@ -12,13 +12,14 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textview.MaterialTextView;
 import com.son.bookhaven.MainActivity;
 import com.son.bookhaven.R;
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.OrderService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.OrderService;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.request.UpdateOrderRequest;
 import com.son.bookhaven.data.dto.response.PaymentLinkInformation;
@@ -149,15 +150,24 @@ public class OrderConfirmationFragment extends Fragment {
     }
 
     private void setupListeners() {
+        MainActivity mainActivity = (MainActivity) getActivity();
         buttonViewOrderHistory.setOnClickListener(v -> {
             if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).replaceFragment(new OrderHistoryFragment());
+
+                mainActivity.replaceFragment(new OrderHistoryFragment());
+
+                // Cast to BottomNavigationView before calling getMenu()
+                ((BottomNavigationView) mainActivity.findViewById(R.id.bottom_navigation))
+                        .getMenu().findItem(R.id.nav_profile).setChecked(true);
             }
         });
 
         buttonContinueShopping.setOnClickListener(v -> {
             if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).replaceFragment(new HomeFragment());
+                mainActivity.replaceFragment(new HomeFragment());
+
+                ((BottomNavigationView) mainActivity.findViewById(R.id.bottom_navigation))
+                        .getMenu().findItem(R.id.nav_home).setChecked(true);
             }
         });
     }

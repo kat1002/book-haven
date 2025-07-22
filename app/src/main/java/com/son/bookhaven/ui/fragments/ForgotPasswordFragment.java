@@ -16,15 +16,12 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.son.bookhaven.R;
-import com.son.bookhaven.apiHelper.AccountApiService;
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.AuthApiService;
-import com.son.bookhaven.authService.TokenManager;
+import com.son.bookhaven.services.AccountApiService;
+import com.son.bookhaven.utils.ApiClient;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.request.ForgotPasswordRequest;
 

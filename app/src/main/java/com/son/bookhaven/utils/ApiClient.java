@@ -1,8 +1,6 @@
-package com.son.bookhaven.apiHelper;
+package com.son.bookhaven.utils;
 
 import android.content.Context;
-
-import com.son.bookhaven.authService.TokenManager;
 
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;

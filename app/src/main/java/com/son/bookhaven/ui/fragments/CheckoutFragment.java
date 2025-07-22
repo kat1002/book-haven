@@ -27,11 +27,11 @@ import com.google.android.material.textview.MaterialTextView;
 import com.son.bookhaven.MainActivity;
 import com.son.bookhaven.PaymentActivity;
 import com.son.bookhaven.R;
-import com.son.bookhaven.apiHelper.AddressApiClient;
-import com.son.bookhaven.apiHelper.AddressApiService;
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.CheckOutService;
-import com.son.bookhaven.apiHelper.VoucherApiService;
+import com.son.bookhaven.utils.AddressApiClient;
+import com.son.bookhaven.services.AddressApiService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.CheckOutService;
+import com.son.bookhaven.services.VoucherApiService;
 import com.son.bookhaven.data.adapters.CartItemAdapter;
 import com.son.bookhaven.data.adapters.VoucherAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
@@ -429,8 +429,8 @@ public class CheckoutFragment extends Fragment {
         if (phoneNumber.isEmpty()) {
             textInputLayoutPhone.setError("Phone number is required");
             isValid = false;
-        } else if (phoneNumber.length() < 10 || phoneNumber.length() > 15) {
-            textInputLayoutPhone.setError("Phone number must be between 10 and 15 digits");
+        } else if (!phoneNumber.matches("^0\\d{9}$")) {
+            textInputLayoutPhone.setError("Please enter a valid Vietnamese phone number");
             isValid = false;
         } else {
             textInputLayoutPhone.setError(null);
