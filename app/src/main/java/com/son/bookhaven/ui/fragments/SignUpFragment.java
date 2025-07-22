@@ -19,8 +19,8 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.son.bookhaven.R;
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.AuthApiService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.AuthApiService;
 import com.son.bookhaven.data.dto.request.RegisterRequest;
 import com.son.bookhaven.data.dto.response.RegisterResponse;
 

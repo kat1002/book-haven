@@ -1,4 +1,4 @@
-package com.son.bookhaven.authService;
+package com.son.bookhaven.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;

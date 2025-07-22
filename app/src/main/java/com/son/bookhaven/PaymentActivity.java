@@ -15,8 +15,8 @@ import android.widget.ProgressBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.OrderService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.OrderService;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.OrderResponse;
 import com.son.bookhaven.ui.fragments.OrderConfirmationFragment;

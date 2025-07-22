@@ -16,8 +16,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.son.bookhaven.R;
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.BookVariantApiService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.BookVariantApiService;
 import com.son.bookhaven.data.adapters.NewArrivalsAdapter;
 import com.son.bookhaven.data.dto.ApiResponse;
 import com.son.bookhaven.data.dto.response.BookVariantResponse;

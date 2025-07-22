@@ -1,4 +1,6 @@
-package com.son.bookhaven.apiHelper;
+package com.son.bookhaven.utils;
+
+import com.son.bookhaven.services.AddressApiService;
 
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;

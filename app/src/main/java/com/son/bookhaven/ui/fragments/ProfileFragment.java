@@ -23,10 +23,10 @@ import com.google.android.material.imageview.ShapeableImageView;
 import com.google.gson.Gson;
 import com.pranathicodes.letteravatar.AvatarCreator;
 import com.son.bookhaven.R;
-import com.son.bookhaven.apiHelper.AccountApiService;
-import com.son.bookhaven.apiHelper.ApiClient;
-import com.son.bookhaven.apiHelper.AuthApiService;
-import com.son.bookhaven.authService.TokenManager;
+import com.son.bookhaven.services.AccountApiService;
+import com.son.bookhaven.utils.ApiClient;
+import com.son.bookhaven.services.AuthApiService;
+import com.son.bookhaven.utils.TokenManager;
 import com.son.bookhaven.data.dto.response.ErrorResponse;
 import com.son.bookhaven.data.model.User;
 
