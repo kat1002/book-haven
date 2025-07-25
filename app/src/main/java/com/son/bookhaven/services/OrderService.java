@@ -16,7 +16,7 @@ import retrofit2.http.Query;
 public interface OrderService {
     @GET("api/order/user-orders")
     Call<ApiResponse<PagedResult<OrderResponse>>> getUserOrders(
-            @Query("userId") int userId,
+
             @Query("page") int page,
             @Query("pageSize") int pageSize,
             @Query("searchTerm") String searchTerm,

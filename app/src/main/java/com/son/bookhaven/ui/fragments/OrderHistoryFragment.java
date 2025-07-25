@@ -146,7 +146,10 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
                 int checkedId = checkedIds.get(0);
                 if (checkedId == R.id.chip_pending_payment) {
                     currentStatus = "PendingPayment";
-                } else if (checkedId == R.id.chip_delivering) {
+                }else if (checkedId == R.id.chip_order_processing) {
+                    currentStatus = "OrderProcessing";
+                }
+                else if (checkedId == R.id.chip_delivering) {
                     currentStatus = "Delivering";
                 } else if (checkedId == R.id.chip_delivered) {
                     currentStatus = "Delivered";
@@ -179,7 +182,7 @@ public class OrderHistoryFragment extends Fragment implements OrderAdapter.OnOrd
         int pageSize = 10;
 
         Call<ApiResponse<PagedResult<OrderResponse>>> call = orderService.getUserOrders(
-                userId, page, pageSize, currentSearchTerm, currentStatus);
+                 page, pageSize, currentSearchTerm, currentStatus);
         call.enqueue(new Callback<ApiResponse<PagedResult<OrderResponse>>>() {
             @Override
             public void onResponse(Call<ApiResponse<PagedResult<OrderResponse>>> call, Response<ApiResponse<PagedResult<OrderResponse>>> response) {
