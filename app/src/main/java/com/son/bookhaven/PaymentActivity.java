@@ -1,5 +1,7 @@
 package com.son.bookhaven;
 
+import static android.content.Intent.getIntent;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -82,6 +84,10 @@ public class PaymentActivity extends AppCompatActivity {
                 String url = request.getUrl().toString();
                 Log.d("PaymentActivity", "URL loading: " + url);
 
+                if (url.contains("/Public/Account/OrderDetails/")) {
+                    url = convertToCustomScheme(url);
+                    Log.d("PaymentActivity", "Converted URL: " + url);
+                }
                 // Handle custom bookhaven URL scheme
                 if (url.startsWith("bookhaven://payment/")) {
                     Uri uri = Uri.parse(url);
@@ -152,6 +158,46 @@ public class PaymentActivity extends AppCompatActivity {
                 .show();
     }
 
+    private String convertToCustomScheme(String url) {
+        try {
+            Uri uri = Uri.parse(url);
+
+            // Extract the order ID from the path
+            List<String> pathSegments = uri.getPathSegments();
+            String orderId = null;
+            for (int i = 0; i < pathSegments.size(); i++) {
+                if ("OrderDetails".equals(pathSegments.get(i)) && i + 1 < pathSegments.size()) {
+                    orderId = pathSegments.get(i + 1);
+                    break;
+                }
+            }
+
+            if (orderId != null) {
+                // Determine status (cancel or success)
+                boolean isCancel = url.contains("cancel=true") || url.contains("status=CANCELLED");
+                String status = isCancel ? "cancel" : "success";
+
+                // Build custom URL with same query parameters
+                StringBuilder customUrl = new StringBuilder();
+                customUrl.append("bookhaven://payment/")
+                        .append(status)
+                        .append("/")
+                        .append(orderId);
+
+                // Add query string if present
+                String query = uri.getQuery();
+                if (query != null && !query.isEmpty()) {
+                    customUrl.append("?").append(query);
+                }
+
+                return customUrl.toString();
+            }
+        } catch (Exception e) {
+            Log.e("PaymentActivity", "Error converting URL to custom scheme", e);
+        }
+
+        return url;
+    }
     private void fetchOrderDetailsAndComplete(int orderId, String paymentCode, boolean isSuccess) {
         Log.d("PaymentActivity", "Fetching order details for orderId: " + orderId);
         progressBar.setVisibility(View.VISIBLE);
